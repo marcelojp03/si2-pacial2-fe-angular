@@ -8,7 +8,7 @@ import { environment } from '../../../environments/environment';
 })
 export class MetodoPagoService {
   private http = inject(HttpClient);
-  private apiURL = environment.backend.host;
+  private apiURL = environment.api.baseUrl;
 
   obtenerTodos(): Observable<any> {
     let url = this.apiURL + "/metodo_pago/listar";

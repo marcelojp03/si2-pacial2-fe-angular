@@ -17,6 +17,6 @@ export class DataService {
 
   getMenu(): Observable<MenuResponse> {
     // El interceptor agregará automáticamente el token
-    return this.http.get<MenuResponse>(`${environment.backend.host}/menu`);
+    return this.http.get<MenuResponse>(`${environment.api.baseUrl}/menu`);
   }
 }

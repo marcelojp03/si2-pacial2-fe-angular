@@ -2,19 +2,29 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import {
-  DashboardStatsResponse,
-  StockAlertsResponse,
-  RecentMovementsResponse,
-  TopProductsResponse
-} from '../../dashboard/components/home/home.interface';
+
+// Local interfaces for dashboard
+interface DashboardStatsResponse {
+  success: boolean;
+  data: {
+    total_products: number;
+    low_stock_products: number;
+    total_movements: number;
+    recent_movements: any[];
+  };
+}
+
+interface StockAlertsResponse {
+  success: boolean;
+  data: any[];
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class DashboardService {
   private http = inject(HttpClient);
-  private apiUrl = `${environment.backend.host}/dashboard`;
+  private apiUrl = `${environment.api.baseUrl}/dashboard`;
 
   /**
    * Obtiene KPIs del dashboard (productos, stock bajo, movimientos)
@@ -31,6 +41,6 @@ export class DashboardService {
    * Endpoint correcto según documentación
    */
   getAlerts(): Observable<StockAlertsResponse> {
-    return this.http.get<StockAlertsResponse>(`${environment.backend.host}/stocks/low`);
+    return this.http.get<StockAlertsResponse>(`${environment.api.baseUrl}/stocks/low`);
   }
 }

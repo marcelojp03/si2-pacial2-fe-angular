@@ -4,22 +4,20 @@
 
 export const environment = {
   production: false,
-  backend: {
-    host: 'http://localhost:4646/api',
-    host3: '',
-    host4: '',
-    reportes: 'http://localhost:8530/api/rep',
+  api: {
+    baseUrl: 'http://127.0.0.1:8000/api',
+    timeout: 30000,
   },
-  oauth: {
-    host: 'http://localhost:8585/api',
-    host3: 'http://localhost:8585/api',
-    host4: 'http://207.244.229.255:8510/api',
-    client_id: '2',
-    client_secret: 'tsN80QNwTawD3WZSX2uziOFI6HstTEs2bXBqsCyv',
-    scope: '*',
+  mock: false, // Activar para usar datos mock sin backend
+  auth: {
+    tokenKey: 'ecommerce_token',
+    refreshKey: 'ecommerce_refresh',
+    userKey: 'ecommerce_user',
   },
-  movieDB: {
-    host: 'http://api.themoviedb.org/3',
+  features: {
+    enableVoiceCommands: true,
+    enableForecasting: true,
+    enableReports: true,
   }
 };
 

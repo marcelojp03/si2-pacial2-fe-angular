@@ -9,14 +9,15 @@ import { HttpApi } from '../http/http-api';
 import { User, LoginRequest, LoginSuccessResponse, LoginErrorResponse, UserData } from '../../auth/interfaces/auth.interface';
 import { SignupRequest, SignupResponse } from '../../auth/interfaces/signup.interface';
 
-const OAUTH_DATA = environment.oauth;
+// OAUTH_DATA no está definido en environment - funcionalidad legacy comentada
+// const OAUTH_DATA = environment.oauth;
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   private http = inject(HttpClient);
-  private apiUrl = environment.backend.host;
+  private apiUrl = environment.api.baseUrl;
   private tokenKey = 'authToken'; // Nombre de la clave
 
   register(userRequest: any): Observable<any> {
@@ -83,7 +84,10 @@ export class AuthService {
   }
 
   loginWithRefreshToken(): Observable<any> {
-    let headers = new HttpHeaders();
+    // NOTA: Funcionalidad OAuth comentada - OAUTH_DATA no está en environment
+    throw new Error('OAuth not configured');
+    
+    /* let headers = new HttpHeaders();
     headers = headers.set('Content-Type', 'application/x-www-form-urlencoded');
 
     const body = new URLSearchParams();
@@ -93,13 +97,13 @@ export class AuthService {
     body.set('refresh_token', this.refreshToken);
     body.set('scope', OAUTH_DATA.scope);
 
-    return this.http.post(HttpApi.oauthLogin, body.toString(), { headers })
+    return this.http.post(HttpApi.authLogin, body.toString(), { headers })
       .pipe(
         map((response: any) => {
           localStorage.setItem('session', JSON.stringify(response));
           return response;
         })
-      );
+      ); */
   }
 
   // Method to save authentication data

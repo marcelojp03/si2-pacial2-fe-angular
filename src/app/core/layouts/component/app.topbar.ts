@@ -7,8 +7,8 @@ import { AppConfigurator } from './app.configurator';
 import { LayoutService } from '../service/layout.service';
 import { SharedModule } from '../../../shared/shared.module';
 import { AuthService } from '../../services/auth.service';
-import { SubscriptionService } from '../../../dashboard/components/subscription/subscription.service';
-import { SubscriptionResponse } from '../../../dashboard/components/subscription/subscription.interface';
+// import { SubscriptionService } from '../../../admin/components/subscription/subscription.service';
+// import { SubscriptionResponse } from '../../../admin/components/subscription/subscription.interface';
 
 @Component({
     selector: 'app-topbar',
@@ -119,21 +119,22 @@ import { SubscriptionResponse } from '../../../dashboard/components/subscription
 export class AppTopbar implements OnInit {
     items!: MenuItem[];
     profileItems: MenuItem[] = [];
-    planName = signal<string>('Cargando...');
-    planBadgeClass = signal<string>('success');
+    planName = signal<string>('Free');
+    planBadgeClass = signal<string>('secondary');
     
     constructor(
         public layoutService: LayoutService,
         private authService: AuthService,
-        private router: Router,
-        private subscriptionService: SubscriptionService
+        private router: Router
+        // private subscriptionService: SubscriptionService
     ) {}
 
     ngOnInit() {
-        this.loadSubscription();
+        // this.loadSubscription();
         this.buildProfileMenu();
     }
 
+    /*
     private loadSubscription() {
         this.subscriptionService.getSubscription().subscribe({
             next: (response: SubscriptionResponse) => {
@@ -162,7 +163,7 @@ export class AppTopbar implements OnInit {
                     this.buildProfileMenu();
                 }
             },
-            error: (err) => {
+            error: (err: any) => {
                 // Si es 404, el endpoint no existe aún - usar plan gratuito por defecto
                 if (err.status === 404) {
                     console.warn('Subscription endpoint not available (404)');
@@ -177,6 +178,7 @@ export class AppTopbar implements OnInit {
             }
         });
     }
+    */
 
     private buildProfileMenu() {
         this.profileItems = [

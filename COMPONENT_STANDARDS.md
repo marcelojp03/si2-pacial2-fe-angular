@@ -103,16 +103,13 @@ export class MiComponente {
 ### 🅱️ **Patrón B: Solo Lectura + Análisis**
 **Casos de uso:** Sugerencias, Stock Bajo, Reportes, Logs
 - ✅ Solo lectura
-- ✅ Stats cards (4 KPIs)
-- ✅ Botón refresh/actualizar
+- ✅ **Botón "Actualizar" en caption de tabla** (NO en header)
+- ⚠️ **Stats cards opcionales** (solo cuando hay métricas relevantes)
 - ❌ Sin Dialog CRUD
+- ❌ Sin Toolbar  
 - ❌ Sin selección múltiple
 
-**Ejemplos:** `reorder-suggestions`, `stocks-low`, `system-logs`
-
----
-
-## 🎨 Patrón A: CRUD Completo
+**Ejemplos:** ✅ `reorder-suggestions` (con 4 stats), ✅ `stocks-low` (sin stats)
 
 ---
 
@@ -282,26 +279,20 @@ export class MiComponente {
 <p-toast />
 
 <div class="grid grid-cols-12 gap-6">
-  <!-- Header Card -->
+  <!-- Header Card (sin botón) -->
   <div class="col-span-12">
     <div class="card">
-      <div class="flex justify-between items-center">
-        <div>
-          <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 m-0">
-            <i class="pi pi-chart-line mr-2 text-blue-500"></i>
-            Sugerencias de Reposición
-          </h2>
-          <p class="text-muted-color mt-2">
-            Recomendaciones automáticas basadas en stock mínimo
-          </p>
-        </div>
-        <button pButton icon="pi pi-refresh" label="Actualizar" 
-                class="p-button-outlined" (click)="loadData()" [loading]="loading()" />
-      </div>
+      <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 m-0">
+        <i class="pi pi-chart-line mr-2 text-blue-500"></i>
+        Sugerencias de Reposición
+      </h2>
+      <p class="text-muted-color mt-2">
+        Recomendaciones automáticas basadas en stock mínimo
+      </p>
     </div>
   </div>
 
-  <!-- Stats Cards (OBLIGATORIAS - usar <app-stats-card>) -->
+  <!-- Stats Cards (OPCIONALES - solo si hay métricas relevantes) -->
   @for (stat of statsCards(); track stat.label) {
     <div class="col-span-12 md:col-span-6 lg:col-span-3">
       <app-stats-card [config]="stat" />
@@ -309,23 +300,23 @@ export class MiComponente {
   }
 
   <!-- Table Card -->
-    <div class="card bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-muted-color text-sm mb-1">Urgentes</p>
-          <p class="text-3xl font-bold text-red-600">{{ getUrgentCount() }}</p>
-        </div>
-        <i class="pi pi-exclamation-triangle text-4xl text-red-500 opacity-50"></i>
-      </div>
-    </div>
-  </div>
-
-  <!-- Table Card -->
   <div class="col-span-12">
     <div class="card">
       @if (loading()) {
         <div class="text-center py-8">
           <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
+          <p class="text-muted-color mt-4">Cargando datos...</p>
+        </div>
+      } @else if (items() && items()!.length > 0) {
+        <p-table [value]="items()!" [paginator]="true" [rows]="10">
+          <!-- Caption con botón Actualizar -->
+          <ng-template #caption>
+            <div class="flex items-center justify-end">
+              <button pButton icon="pi pi-refresh" label="Actualizar" 
+                      class="p-button-outlined p-button-sm" 
+                      (click)="loadData()" [loading]="loading()" />
+            </div>
+          </ng-template>
           <p class="text-muted-color mt-4">Cargando datos...</p>
         </div>
       } @else if (items() && items().length > 0) {
@@ -551,30 +542,16 @@ component-name/
 
 ```typescript
 import { Component, OnInit, signal, inject, ViewChild } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { SharedModule } from '../../../shared/shared.module';
 import { MessageService, ConfirmationService } from 'primeng/api';
-import { Table, TableModule } from 'primeng/table';
-import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
-import { ToolbarModule } from 'primeng/toolbar';
-import { ToastModule } from 'primeng/toast';
-import { TagModule } from 'primeng/tag';
-import { InputTextModule } from 'primeng/inputtext';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
-import { ItemService } from './item.service';
-import { Item } from './item.interface';
+import { Table } from 'primeng/table';
+import type { Item } from './interfaces/item.interface';
+import { ItemService } from './services/item.service';
 
 @Component({
   selector: 'app-items',
   standalone: true,
-  imports: [
-    CommonModule, FormsModule, TableModule, ButtonModule, DialogModule,
-    ToolbarModule, ToastModule, TagModule, InputTextModule, ConfirmDialogModule,
-    IconFieldModule, InputIconModule
-  ],
+  imports: [SharedModule],
   providers: [MessageService, ConfirmationService],
   templateUrl: './items.component.html'
 })
@@ -701,25 +678,15 @@ export class ItemsComponent implements OnInit {
 
 ```typescript
 import { Component, OnInit, signal, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { TableModule } from 'primeng/table';
-import { ButtonModule } from 'primeng/button';
-import { TagModule } from 'primeng/tag';
-import { ToastModule } from 'primeng/toast';
+import { SharedModule } from '../../../shared/shared.module';
 import { MessageService } from 'primeng/api';
-import { ItemService } from './item.service';
-import { Item } from './item.interface';
+import type { Item } from './interfaces/item.interface';
+import { ItemService } from './services/item.service';
 
 @Component({
   selector: 'app-suggestions',
   standalone: true,
-  imports: [
-    CommonModule,
-    TableModule,
-    ButtonModule,
-    TagModule,
-    ToastModule
-  ],
+  imports: [SharedModule],
   providers: [MessageService],
   templateUrl: './suggestions.component.html'
 })
@@ -788,39 +755,16 @@ export class SuggestionsComponent implements OnInit {
 
 ```typescript
 import { Component, OnInit, signal, inject, ViewChild } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { SharedModule } from '../../../shared/shared.module';
 import { MessageService, ConfirmationService } from 'primeng/api';
-import { Table, TableModule } from 'primeng/table';
-import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
-import { ToolbarModule } from 'primeng/toolbar';
-import { ToastModule } from 'primeng/toast';
-import { TagModule } from 'primeng/tag';
-import { InputTextModule } from 'primeng/inputtext';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
-import { ItemService } from './item.service';
-import { Item, ItemResponse } from './item.interface';
+import { Table } from 'primeng/table';
+import type { Item, ItemResponse } from './interfaces/item.interface';
+import { ItemService } from './services/item.service';
 
 @Component({
   selector: 'app-component-name',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    TableModule,
-    ButtonModule,
-    DialogModule,
-    ToolbarModule,
-    ToastModule,
-    TagModule,
-    InputTextModule,
-    ConfirmDialogModule,
-    IconFieldModule,
-    InputIconModule
-  ],
+  imports: [SharedModule],
   providers: [MessageService, ConfirmationService],
   templateUrl: './component-name.component.html',
   styleUrl: './component-name.component.scss' // opcional
@@ -987,6 +931,204 @@ const statsCardStyles = {
 
 ---
 
+## 🎨 **PATRÓN DE DIALOGS (p-dialog)**
+
+### ✅ Estándar Usado en Products (Referencia)
+
+**Características principales:**
+- ✅ Header dinámico: `"Editar X" vs "Nuevo X"`
+- ✅ Secciones organizadas con h6 + border-b
+- ✅ Grid cols-12 para layout responsivo
+- ✅ Footer con botones: Cancelar (outlined) + Guardar
+- ✅ Validaciones con `*ngIf="submitted && !campo"`
+- ✅ ng-template para content y footer
+- ✅ Modal, no draggable, no resizable
+
+### 📝 Template HTML
+
+```html
+<p-dialog 
+  [(visible)]="itemDialog" 
+  [style]="{ width: '90vw', 'max-width': '700px' }" 
+  [modal]="true"
+  [draggable]="false" 
+  [resizable]="false"
+  [header]="item.id ? 'Editar Item' : 'Nuevo Item'">
+  
+  <ng-template #content>
+    <!-- Sección 1: Información Básica -->
+    <div class="mb-6">
+      <h6 class="text-lg font-semibold mb-4 border-b pb-2">Información Básica</h6>
+      <div class="grid grid-cols-12 gap-4">
+        
+        <!-- Campo prioritario (más ancho) -->
+        <div class="col-span-12 md:col-span-8">
+          <label for="name" class="block text-sm font-medium mb-2">
+            Nombre del Item *
+          </label>
+          <input 
+            id="name" 
+            pInputText 
+            [(ngModel)]="item.name" 
+            required 
+            autofocus 
+            placeholder="Ingrese el nombre" 
+            fluid 
+            class="w-full" 
+          />
+          <small class="text-red-500" *ngIf="submitted && !item.name">
+            El nombre es obligatorio.
+          </small>
+        </div>
+
+        <!-- Campo secundario (más angosto) -->
+        <div class="col-span-12 md:col-span-4">
+          <label for="code" class="block text-sm font-medium mb-2">Código</label>
+          <input 
+            id="code" 
+            pInputText 
+            [(ngModel)]="item.code" 
+            placeholder="SKU o código interno" 
+            fluid 
+          />
+        </div>
+
+        <!-- Campo full width -->
+        <div class="col-span-12">
+          <label for="desc" class="block text-sm font-medium mb-2">Descripción</label>
+          <textarea 
+            id="desc" 
+            pTextarea 
+            rows="3" 
+            [(ngModel)]="item.description" 
+            placeholder="Descripción detallada" 
+            fluid>
+          </textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección 2: Configuración -->
+    <div class="mb-6">
+      <h6 class="text-lg font-semibold mb-4 border-b pb-2">Configuración</h6>
+      <div class="grid grid-cols-12 gap-4">
+        
+        <!-- Select dropdown -->
+        <div class="col-span-12 md:col-span-6">
+          <label class="block text-sm font-medium mb-2">Categoría *</label>
+          <p-select
+            [options]="categories"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="item.category"
+            placeholder="Selecciona una categoría"
+            fluid
+          />
+          <small class="text-red-500" *ngIf="submitted && !item.category">
+            La categoría es obligatoria.
+          </small>
+        </div>
+
+        <!-- Input number -->
+        <div class="col-span-12 md:col-span-6">
+          <label for="stock" class="block text-sm font-medium mb-2">Stock Mínimo *</label>
+          <p-inputnumber 
+            id="stock" 
+            [(ngModel)]="item.min_stock" 
+            [min]="0" 
+            [maxFractionDigits]="2"
+            placeholder="0" 
+            fluid 
+          />
+          <small class="text-red-500" *ngIf="submitted && (item.min_stock == null || item.min_stock < 0)">
+            El stock mínimo debe ser mayor o igual a 0.
+          </small>
+        </div>
+
+        <!-- Checkbox -->
+        <div class="col-span-12 md:col-span-6">
+          <label class="block text-sm font-medium mb-2">Estado</label>
+          <div class="flex items-center mt-2">
+            <p-checkbox [(ngModel)]="item.status" [binary]="true" inputId="status" />
+            <label for="status" class="ml-2">Item activo</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template #footer>
+    <div class="flex justify-end gap-3">
+      <p-button 
+        label="Cancelar" 
+        icon="pi pi-times" 
+        severity="secondary" 
+        [outlined]="true" 
+        (onClick)="hideDialog()" 
+      />
+      <p-button 
+        label="Guardar Item" 
+        icon="pi pi-check" 
+        [loading]="submitted" 
+        (onClick)="saveItem()" 
+      />
+    </div>
+  </ng-template>
+</p-dialog>
+```
+
+### 🎯 Guía de Grid Columns en Dialog
+
+| Tamaño Campo | Desktop | Mobile | Ejemplo |
+|--------------|---------|--------|---------|
+| **Prioritario** | `col-span-8` | `col-span-12` | Nombre, Descripción |
+| **Secundario** | `col-span-4` | `col-span-12` | Código, SKU |
+| **Mitad** | `col-span-6` | `col-span-12` | Categoría, Stock |
+| **Full Width** | `col-span-12` | `col-span-12` | Textarea, Notas |
+
+### 📋 Reglas de Validación
+
+```typescript
+// En el componente .ts
+saveItem(): void {
+  this.submitted.set(true);
+  const item = this.itemForm();
+
+  // Validar campos obligatorios
+  if (!item?.name?.trim()) {
+    this.messageService.add({
+      severity: 'warn',
+      summary: 'Validación',
+      detail: 'Complete los campos obligatorios'
+    });
+    return;
+  }
+
+  // Validar números
+  if (item.min_stock == null || item.min_stock < 0) {
+    return;
+  }
+
+  // Proceder con guardado...
+}
+```
+
+### ✅ Checklist Dialog
+
+- [ ] Width: `90vw` con max-width `700px`
+- [ ] Header dinámico con ternario `item.id ? 'Editar' : 'Nuevo'`
+- [ ] ng-template #content y #footer
+- [ ] Secciones con h6 + border-b
+- [ ] Grid cols-12 con gap-4
+- [ ] Labels con `block text-sm font-medium mb-2`
+- [ ] Inputs con `fluid` attribute
+- [ ] Validaciones con `*ngIf="submitted && !campo"`
+- [ ] Footer con gap-3, justify-end
+- [ ] Botón cancelar: secondary outlined
+- [ ] Botón guardar: con loading state
+
+---
+
 ## 📋 Checklist de Implementación
 
 ### ✅ Estructura
@@ -1089,16 +1231,24 @@ const statsCardStyles = {
 | Aspecto | Products (Patrón A) | Suggestions (Patrón B) |
 |---------|---------------------|------------------------|
 | **Propósito** | CRUD maestro productos | Análisis de reposición |
-| **Layout** | Grid + Toolbar + Table | Grid + Stats + Table |
-| **Stats Cards** | ❌ No tiene | ✅ 4 KPIs superiores |
-| **Toolbar** | ✅ Nuevo/Eliminar/Export | ❌ Solo refresh en header |
+| **Layout** | Grid + Header + Stats + Toolbar + Table | Grid + Header + Stats + Table |
+| **Stats Cards** | ✅ 4 KPIs opcionales | ✅ 4 KPIs opcionales |
+| **Componente Stats** | ✅ `<app-stats-card>` | ✅ `<app-stats-card>` |
+| **Toolbar** | ✅ Nuevo/Eliminar/Export | ❌ No necesita |
+| **Botón Actualizar** | ✅ En caption tabla | ✅ En caption tabla |
+| **Búsqueda** | ✅ En caption tabla | ❌ Opcional |
 | **Selección** | ✅ Múltiple con checkbox | ❌ Solo lectura |
 | **Dialog** | ✅ Formulario CRUD | ❌ No necesita |
 | **ConfirmDialog** | ✅ Para eliminar | ❌ No necesita |
 | **Empty State** | Simple "No hay datos" | Elaborado "¡Todo bien!" |
-| **Service** | product.service.ts | Directo en component |
+| **Archivos** | `.html`, `.ts`, `.service`, `.interface` | `.html`, `.ts`, `.service`, `.interface` |
 
-**Conclusión:** ❌ **NO fusionar** - Son patrones complementarios para casos de uso diferentes
+**Conclusión:** 
+- ❌ **NO fusionar** componentes (diferentes propósitos)
+- ✅ **SÍ unificar** diseño con `<app-stats-card>`
+- ✅ **Botón refresh en caption** de tabla (AMBOS patrones)
+- ✅ **Stats opcionales** en ambos patrones
+- ✅ **Archivos separados obligatorios** para mantenibilidad
 
 ---
 
@@ -1127,10 +1277,10 @@ const statsCardStyles = {
 ### Para Patrón A (CRUD):
 - [ ] Grid cols-12 como wrapper principal
 - [ ] Header card con icono + título + descripción
-- [ ] Stats cards opcionales si hay KPIs relevantes
+- [ ] Stats cards opcionales (solo si hay KPIs relevantes)
 - [ ] Toolbar con botones: Nuevo, Eliminar (deshabilitado), Exportar
 - [ ] Table con selección múltiple (checkbox)
-- [ ] Búsqueda global con iconfield
+- [ ] **Botón "Actualizar" en caption de tabla** (con búsqueda global)
 - [ ] Dialog formulario con grid interno
 - [ ] ConfirmDialog para confirmaciones
 - [ ] Toast notifications
@@ -1138,19 +1288,35 @@ const statsCardStyles = {
 - [ ] inject() para servicios
 - [ ] ViewChild para tabla (export)
 - [ ] Empty state básico
+- [ ] Archivos separados: `.html`, `.ts`, `.service.ts`, `interfaces/*.interface.ts`
 
 ### Para Patrón B (Read-Only):
 - [ ] Grid cols-12 como wrapper principal
-- [ ] Header card con icono + título + descripción + botón refresh
-- [ ] **4 Stats cards obligatorias** con colores diferentes
+- [ ] Header card con icono + título + descripción (SIN botón)
+- [ ] **Stats cards opcionales** (solo si hay métricas relevantes)
 - [ ] Table sin selección, solo lectura
+- [ ] **Botón "Actualizar" en caption de tabla** (p-button-sm p-button-outlined)
 - [ ] Loading state con spinner central
 - [ ] Empty state elaborado con ícono grande y mensaje positivo
 - [ ] Signals para estado
 - [ ] inject() para servicios
-- [ ] Métodos de cálculo para stats (getUrgentCount, etc.)
+- [ ] Computed signals para stats (si las usa)
 - [ ] Toast notifications
 - [ ] NO Dialog, NO ConfirmDialog, NO Toolbar
+- [ ] Archivos separados: `.html`, `.ts`, `.service.ts`, `.interface.ts`
+
+**Cuándo usar stats cards:**
+- ✅ Cuando hay métricas clave que aportan valor (ej: `reorder-suggestions` con 4 KPIs)
+- ❌ Cuando solo es un listado sin análisis (ej: `stocks-low`, `system-logs`)
+
+**Estructura de archivos obligatoria:**
+```
+componente/
+  ├── componente.component.html
+  ├── componente.component.ts
+  ├── componente.service.ts
+  └── componente.interface.ts
+```
 
 ---
 
@@ -1172,31 +1338,289 @@ const statsCardStyles = {
 
 ## 📦 Imports Estándar
 
-```typescript
-// Angular Core
-import { Component, OnInit, signal, inject, ViewChild } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+### ⚠️ IMPORTANTE: Usar SharedModule
 
-// PrimeNG
+**NUNCA importar módulos de PrimeNG directamente**. Siempre usar `SharedModule` que ya incluye `PrimeNgModule` con todos los componentes de PrimeNG.
+
+```typescript
+// ✅ CORRECTO: Importar SharedModule
+import { Component, OnInit, signal, inject, ViewChild } from '@angular/core';
+import { SharedModule } from '../../../shared/shared.module';
 import { MessageService, ConfirmationService } from 'primeng/api';
-import { Table, TableModule } from 'primeng/table';
+import { Table } from 'primeng/table';
+
+// Services & Interfaces
+import { YourService } from './services/your.service';
+import { YourInterface } from './interfaces/your.interface';
+
+@Component({
+  selector: 'app-component-name',
+  standalone: true,
+  imports: [SharedModule], // ✅ Un solo import para PrimeNG
+  providers: [MessageService, ConfirmationService],
+  templateUrl: './component-name.component.html'
+})
+export class ComponentNameComponent implements OnInit {
+  // ...
+}
+```
+
+```typescript
+// ❌ INCORRECTO: Importar módulos PrimeNG individualmente
+import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { ToolbarModule } from 'primeng/toolbar';
-import { ToastModule } from 'primeng/toast';
-import { TagModule } from 'primeng/tag';
-import { InputTextModule } from 'primeng/inputtext';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
-import { SelectModule } from 'primeng/select';
-import { InputNumberModule } from 'primeng/inputnumber';
+// ... 20+ imports más ❌
 
-// Services & Interfaces
-import { YourService } from './your.service';
-import { YourInterface } from './your.interface';
+@Component({
+  imports: [
+    CommonModule,
+    FormsModule,
+    TableModule,      // ❌ No hacer esto
+    ButtonModule,     // ❌ No hacer esto
+    DialogModule,     // ❌ No hacer esto
+    // ...
+  ]
+})
 ```
+
+### 📋 Qué incluye SharedModule
+
+**Ubicación**: `src/app/shared/shared.module.ts`
+
+```typescript
+@NgModule({
+  exports: [
+    CommonModule,           // ✅ Angular common
+    FormsModule,           // ✅ Forms
+    ReactiveFormsModule,   // ✅ Reactive Forms
+    PrimeNgModule          // ✅ Todos los módulos PrimeNG
+  ]
+})
+export class SharedModule { }
+```
+
+**PrimeNgModule incluye** (`src/app/shared/primeng.module.ts`):
+- ✅ TableModule, ButtonModule, DialogModule
+- ✅ ToolbarModule, ToastModule, TagModule
+- ✅ ConfirmDialogModule, SelectModule
+- ✅ InputTextModule, InputNumberModule
+- ✅ IconFieldModule, InputIconModule
+- ✅ **90+ componentes PrimeNG** listos para usar
+
+### 🎯 Beneficios de usar SharedModule
+
+| Ventaja | Descripción |
+|---------|-------------|
+| **Menos imports** | 1 línea en lugar de 20+ |
+| **Consistencia** | Todos los componentes usan la misma configuración |
+| **Mantenibilidad** | Cambios en PrimeNG se hacen en 1 solo lugar |
+| **Performance** | Bundle optimization automático |
+| **Type Safety** | Solo importar tipos de `primeng/api` |
+
+### ✅ Patrón de Imports Recomendado
+
+```typescript
+// Angular Core
+import { Component, OnInit, signal, inject, ViewChild } from '@angular/core';
+import { RouterLink } from '@angular/router'; // Si se usa routing
+
+// Shared Module (incluye PrimeNG + Forms)
+import { SharedModule } from '../../../shared/shared.module';
+
+// PrimeNG API (solo tipos y servicios)
+import { MessageService, ConfirmationService } from 'primeng/api';
+import { Table } from 'primeng/table'; // Solo para ViewChild
+
+// Services locales
+import { YourService } from './services/your.service';
+
+// Interfaces locales
+import type { YourInterface } from './interfaces/your.interface';
+
+@Component({
+  selector: 'app-your-component',
+  standalone: true,
+  imports: [
+    SharedModule,  // ✅ Único import necesario
+    RouterLink     // ✅ Agregar solo módulos específicos adicionales
+  ],
+  providers: [MessageService, ConfirmationService],
+  templateUrl: './your-component.component.html'
+})
+```
+
+### 📌 Notas Importantes
+
+1. **Solo importar de `primeng/api`**: Para servicios (`MessageService`, `ConfirmationService`) y tipos
+2. **ViewChild de Table**: Si necesitas `@ViewChild(Table)`, importa solo el tipo: `import { Table } from 'primeng/table';`
+3. **No mezclar**: Si usas `SharedModule`, NO importes módulos PrimeNG individuales
+4. **Standalone components**: `SharedModule` funciona perfectamente con componentes standalone
+
+---
+
+## 🎯 Dropdowns en Diálogos y Tablas
+
+### Problema Común
+Los `p-select` dentro de diálogos o tablas con scroll se cierran automáticamente cuando el usuario hace scroll en el contenedor padre, impidiendo seleccionar elementos que no están visibles inicialmente.
+
+### Solución: `appendTo="body"`
+
+**Patrón Obligatorio:**
+```html
+<!-- ✅ CORRECTO: Dropdown dentro de diálogo/tabla -->
+<p-select
+  [options]="items()"
+  [(ngModel)]="selectedValue"
+  appendTo="body"
+  [panelStyle]="{'max-height': '300px'}"
+  fluid
+/>
+```
+
+**Por qué funciona:**
+- `appendTo="body"` renderiza el panel del dropdown directamente en el `<body>` del documento
+- Esto evita que el panel quede atrapado dentro de contenedores con `overflow: auto` o `overflow: hidden`
+- El panel permanece visible y accesible independientemente del scroll del contenedor padre
+
+### Contenedores: `overflow-visible`
+
+Cuando usas `appendTo="body"`, el contenedor debe permitir que el panel sea visible:
+
+```html
+<!-- ❌ INCORRECTO: overflow-auto corta el panel -->
+<div class="overflow-auto max-h-96">
+  <p-table>
+    <ng-template pTemplate="body" let-item>
+      <p-select .../>  <!-- Se cierra al hacer scroll -->
+    </ng-template>
+  </p-table>
+</div>
+
+<!-- ✅ CORRECTO: overflow-visible permite ver el panel -->
+<div class="overflow-visible">
+  <p-table>
+    <ng-template pTemplate="body" let-item>
+      <p-select appendTo="body" .../>  <!-- Funciona correctamente -->
+    </ng-template>
+  </p-table>
+</div>
+```
+
+### Casos de Uso
+
+**1. Dropdowns en tablas editables:**
+```html
+<!-- Ejemplo: BOMs - Selección de componentes -->
+<p-table [value]="bom().components">
+  <ng-template pTemplate="body" let-component>
+    <td>
+      <p-select
+        [options]="availableProducts()"
+        [(ngModel)]="component.component_id"
+        optionLabel="name"
+        optionValue="id"
+        placeholder="Selecciona componente"
+        appendTo="body"
+        [panelStyle]="{'max-height': '300px'}"
+        fluid
+      />
+    </td>
+  </ng-template>
+</p-table>
+```
+
+**2. Dropdowns en diálogos con formularios:**
+```html
+<!-- Ejemplo: Work Orders - Selección de producto -->
+<p-dialog [(visible)]="displayDialog" [style]="{width: '700px'}">
+  <div class="grid grid-cols-12 gap-4">
+    <div class="col-span-12">
+      <label>Producto *</label>
+      <p-select
+        [options]="products()"
+        [(ngModel)]="entity().product_id"
+        optionLabel="name"
+        optionValue="id"
+        appendTo="body"
+        fluid
+      />
+    </div>
+  </div>
+</p-dialog>
+```
+
+**3. Dropdowns anidados (tabla dentro de diálogo):**
+```html
+<!-- Ejemplo: BOMs - Unidades en componentes -->
+<p-dialog [(visible)]="displayDialog">
+  <div class="overflow-visible">  <!-- ⚠️ IMPORTANTE -->
+    <p-table [value]="bom().components">
+      <ng-template pTemplate="body" let-item>
+        <p-select
+          [options]="units()"
+          [(ngModel)]="item.unit_id"
+          appendTo="body"
+          fluid
+        >
+          <ng-template let-unit pTemplate="item">
+            <div>{{ unit.code }}</div>
+            <small class="text-gray-500">{{ unit.description }}</small>
+          </ng-template>
+        </p-select>
+      </ng-template>
+    </p-table>
+  </div>
+</p-dialog>
+```
+
+### Configuraciones Adicionales
+
+**panelStyle:**
+```html
+<!-- Limitar altura del panel para evitar que ocupe toda la pantalla -->
+<p-select
+  appendTo="body"
+  [panelStyle]="{'max-height': '300px'}"
+/>
+```
+
+**virtualScroll:**
+```html
+<!-- ⚠️ EVITAR: virtualScroll puede conflictuar con appendTo="body" -->
+<!-- Usar solo para listas muy largas (>1000 items) y sin appendTo -->
+<p-select
+  [options]="largeList"
+  [virtualScroll]="true"
+  [virtualScrollItemSize]="38"
+/>
+```
+
+### Checklist de Implementación
+
+Al crear/editar componentes con dropdowns en tablas o diálogos:
+
+- [ ] Agregar `appendTo="body"` a todos los `p-select`
+- [ ] Configurar `[panelStyle]="{'max-height': '300px'}"` si es necesario
+- [ ] Cambiar `overflow-auto` a `overflow-visible` en contenedores padre
+- [ ] Verificar que no haya conflictos con `virtualScroll`
+- [ ] Probar scroll en la tabla/diálogo para confirmar que el dropdown no se cierra
+- [ ] Validar que los elementos se pueden seleccionar correctamente
+
+### Troubleshooting
+
+**Síntoma:** Dropdown se cierra al hacer scroll
+- ✅ Solución: Agregar `appendTo="body"`
+
+**Síntoma:** Panel del dropdown está cortado/oculto
+- ✅ Solución: Cambiar contenedor padre a `overflow-visible`
+
+**Síntoma:** Dropdown no se posiciona correctamente
+- ✅ Solución: Verificar que no haya múltiples `position: relative` anidados
+
+**Síntoma:** virtualScroll no funciona con appendTo="body"
+- ✅ Solución: Remover uno de los dos (preferir `appendTo="body"` en tablas/diálogos)
 
 ---
 

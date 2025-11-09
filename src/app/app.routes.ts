@@ -4,42 +4,62 @@ import { AppLayout } from './core/layouts/component/app.layout';
 import { Notfound } from './core/layouts/component/notfound';
 import { authGuard, authMatchGuard } from './core/guards/auth.guard';
 import { loggedResolver } from './core/guards/logged.guard';
-import { LandingComponent } from './landing/landing.component';
 
 export const appRoutes: Routes = [
-    // Landing Page (público, sin autenticación)
-    {
-        path: 'landing',
-        component: LandingComponent
-    },
-
-    // Zona protegida por authGuard
+    // ========================================
+    // SHOPPING (Público - E-commerce)
+    // ========================================
     {
         path: '',
+        loadChildren: () => import('./shopping/shopping.routes').then(m => m.shoppingRoutes)
+    },
+    {
+        path: 'shop',
+        loadChildren: () => import('./shopping/shopping.routes').then(m => m.shoppingRoutes)
+    },
+
+    // ========================================
+    // ADMIN (Protegido - Panel de Administración)
+    // ========================================
+    {
+        path: 'admin',
         component: AppLayout,
         canActivate: [authGuard],
         children: [
-        {
-            path: '',
-            redirectTo: 'dashboard',
-            pathMatch: 'full'
-        },
-        {
-            path: 'dashboard',
-            // proteger el lazy con canMatch con doble capa
-            canMatch: [authMatchGuard],
-            loadChildren: () => import('./dashboard/dashboard.routes').then(m => m.dashboardRoutes)
-        }
+            {
+                path: '',
+                canMatch: [authMatchGuard],
+                loadChildren: () => import('./admin/admin.routes').then(m => m.adminRoutes)
+            }
         ]
     },
 
-    // Auth (redirige si ya está logueado)
+    // ========================================
+    // AUTH (Login/Register)
+    // ========================================
     {
         path: 'auth',
         loadChildren: () => import('./auth/auth.routes').then(m => m.authRoutes),
         resolve: [loggedResolver]
     },
 
+    // ========================================
+    // LEGACY ROUTES (Compatibilidad)
+    // ========================================
+    {
+        path: 'landing',
+        redirectTo: '',
+        pathMatch: 'full'
+    },
+    {
+        path: 'dashboard',
+        redirectTo: 'admin',
+        pathMatch: 'prefix'
+    },
+
+    // ========================================
+    // 404
+    // ========================================
     { path: 'not-found', component: Notfound },
-    { path: '**', redirectTo: 'landing' }  // Redirigir a landing por defecto
+    { path: '**', redirectTo: '' }
 ];

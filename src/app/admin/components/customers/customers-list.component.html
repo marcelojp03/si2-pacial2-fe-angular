@@ -1,0 +1,344 @@
+<p-toast />
+
+<div class="grid grid-cols-12 gap-6">
+  <!-- Header Card -->
+  <div class="col-span-12">
+    <div class="card mb-0">
+      <div class="flex items-center justify-between">
+        <div>
+          <h5 class="text-xl font-semibold mb-1">Gestión de Clientes</h5>
+          <p class="text-muted-color text-sm">Administra la información de todos los clientes</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  @for (stat of statsCards(); track stat.label) {
+    <div class="col-span-12 md:col-span-6 lg:col-span-3">
+      <app-stats-card [config]="stat" />
+    </div>
+  }
+
+  <!-- Tabla de Clientes -->
+  <div class="col-span-12">
+    <div class="card">
+      <!-- Toolbar -->
+      <p-toolbar styleClass="mb-6 gap-2">
+        <ng-template pTemplate="left">
+          <p-button 
+            label="Nuevo" 
+            icon="pi pi-plus" 
+            class="mr-2"
+            (onClick)="openNew()"
+          />
+          <p-button 
+            label="Eliminar" 
+            icon="pi pi-trash" 
+            severity="danger"
+            [outlined]="true"
+            (onClick)="deleteSelectedCustomers()"
+            [disabled]="!selectedCustomers() || selectedCustomers().length === 0"
+          />
+        </ng-template>
+
+        <ng-template pTemplate="right">
+          <p-button 
+            label="Exportar" 
+            icon="pi pi-upload" 
+            severity="help"
+            (onClick)="exportCSV()"
+          />
+        </ng-template>
+      </p-toolbar>
+
+      <!-- Tabla -->
+      <p-table 
+        #dt
+        [value]="customers()" 
+        [loading]="loading()"
+        [paginator]="true"
+        [rows]="10"
+        [totalRecords]="totalCustomers()"
+        [lazy]="true"
+        (onLazyLoad)="loadCustomers($event)"
+        [(selection)]="selectedCustomers"
+        dataKey="id"
+        [tableStyle]="{'min-width': '70rem'}"
+        styleClass="p-datatable-striped"
+        [globalFilterFields]="['first_name', 'last_name', 'email', 'company_name']"
+      >
+        <ng-template pTemplate="caption">
+          <div class="flex items-center justify-between">
+            <p-iconfield iconPosition="left">
+              <p-inputicon styleClass="pi pi-search" />
+              <input 
+                pInputText 
+                type="text" 
+                (input)="onGlobalFilter($event)" 
+                placeholder="Buscar clientes..." 
+              />
+            </p-iconfield>
+          </div>
+        </ng-template>
+
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="width: 4rem">
+              <p-tableHeaderCheckbox />
+            </th>
+            <th pSortableColumn="first_name">
+              Cliente
+              <p-sortIcon field="first_name" />
+            </th>
+            <th pSortableColumn="email">
+              Email
+              <p-sortIcon field="email" />
+            </th>
+            <th>Teléfono</th>
+            <th class="text-center">Tipo</th>
+            <th pSortableColumn="created_at">
+              Registro
+              <p-sortIcon field="created_at" />
+            </th>
+            <th class="text-center">Estado</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="body" let-customer>
+          <tr>
+            <td>
+              <p-tableCheckbox [value]="customer" />
+            </td>
+            <td>
+              <div class="flex items-center gap-2">
+                <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
+                  {{ getInitials(customer.first_name, customer.last_name) }}
+                </div>
+                <div>
+                  <div class="font-semibold">
+                    {{ customer.first_name }} {{ customer.last_name }}
+                  </div>
+                  @if (customer.company_name) {
+                    <div class="text-xs text-muted-color">
+                      {{ customer.company_name }}
+                    </div>
+                  }
+                </div>
+              </div>
+            </td>
+            <td>{{ customer.email }}</td>
+            <td>{{ customer.phone || '-' }}</td>
+            <td class="text-center">
+              <p-tag 
+                [value]="customer.customer_type === 'BUSINESS' ? 'Empresa' : 'Individual'" 
+                [severity]="customer.customer_type === 'BUSINESS' ? 'info' : 'success'"
+              />
+            </td>
+            <td>{{ customer.created_at | date:'dd/MM/yyyy' }}</td>
+            <td class="text-center">
+              <p-tag 
+                [value]="customer.is_active ? 'Activo' : 'Inactivo'" 
+                [severity]="customer.is_active ? 'success' : 'danger'"
+              />
+            </td>
+            <td class="text-center">
+              <p-button 
+                icon="pi pi-pencil" 
+                [rounded]="true"
+                [outlined]="true"
+                class="mr-2"
+                (onClick)="editCustomer(customer)"
+              />
+              <p-button 
+                icon="pi pi-trash" 
+                [rounded]="true"
+                [outlined]="true"
+                severity="danger"
+                (onClick)="deleteCustomer(customer)"
+              />
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="8" class="text-center py-12">
+              <div class="flex flex-col items-center gap-4">
+                <i class="pi pi-users text-6xl text-muted-color"></i>
+                <div>
+                  <p class="text-xl font-semibold text-muted-color mb-2">No hay clientes registrados</p>
+                  <p class="text-sm text-muted-color">Comienza agregando tu primer cliente</p>
+                </div>
+                <p-button 
+                  label="Nuevo Cliente" 
+                  icon="pi pi-plus"
+                  (onClick)="openNew()"
+                />
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+</div>
+
+<!-- Dialog para Crear/Editar Cliente -->
+<p-dialog 
+  [(visible)]="customerDialog" 
+  [header]="currentCustomer() ? 'Editar Cliente' : 'Nuevo Cliente'"
+  [modal]="true"
+  [style]="{ width: '90vw', 'max-width': '700px' }"
+  [draggable]="false"
+  [resizable]="false"
+>
+  <ng-template pTemplate="content">
+    <form [formGroup]="customerForm">
+      <div class="grid grid-cols-12 gap-4">
+        <!-- Información Personal -->
+        <div class="col-span-12">
+          <h6 class="text-base font-semibold mb-3 pb-2 border-b">Información Personal</h6>
+        </div>
+
+        <!-- Nombres -->
+        <div class="col-span-12 md:col-span-6">
+          <label for="first_name" class="block text-sm font-medium mb-2">
+            Nombres <span class="text-red-500">*</span>
+          </label>
+          <input 
+            pInputText 
+            id="first_name" 
+            formControlName="first_name"
+            placeholder="Juan"
+            [fluid]="true"
+            [class.ng-invalid]="submitted() && customerForm.get('first_name')?.invalid"
+            [class.ng-dirty]="submitted() && customerForm.get('first_name')?.invalid"
+          />
+          @if (submitted() && customerForm.get('first_name')?.hasError('required')) {
+            <small class="text-red-500">El nombre es requerido</small>
+          }
+        </div>
+
+        <!-- Apellidos -->
+        <div class="col-span-12 md:col-span-6">
+          <label for="last_name" class="block text-sm font-medium mb-2">
+            Apellidos <span class="text-red-500">*</span>
+          </label>
+          <input 
+            pInputText 
+            id="last_name" 
+            formControlName="last_name"
+            placeholder="Pérez"
+            [fluid]="true"
+            [class.ng-invalid]="submitted() && customerForm.get('last_name')?.invalid"
+            [class.ng-dirty]="submitted() && customerForm.get('last_name')?.invalid"
+          />
+          @if (submitted() && customerForm.get('last_name')?.hasError('required')) {
+            <small class="text-red-500">El apellido es requerido</small>
+          }
+        </div>
+
+        <!-- Email -->
+        <div class="col-span-12 md:col-span-6">
+          <label for="email" class="block text-sm font-medium mb-2">
+            Email <span class="text-red-500">*</span>
+          </label>
+          <input 
+            pInputText 
+            id="email" 
+            type="email"
+            formControlName="email"
+            placeholder="juan@ejemplo.com"
+            [fluid]="true"
+            [class.ng-invalid]="submitted() && customerForm.get('email')?.invalid"
+            [class.ng-dirty]="submitted() && customerForm.get('email')?.invalid"
+          />
+          @if (submitted() && customerForm.get('email')?.hasError('required')) {
+            <small class="text-red-500">El email es requerido</small>
+          }
+          @if (submitted() && customerForm.get('email')?.hasError('email')) {
+            <small class="text-red-500">Email inválido</small>
+          }
+        </div>
+
+        <!-- Teléfono -->
+        <div class="col-span-12 md:col-span-6">
+          <label for="phone" class="block text-sm font-medium mb-2">Teléfono</label>
+          <input 
+            pInputText 
+            id="phone" 
+            formControlName="phone"
+            placeholder="+591 70123456"
+            [fluid]="true"
+          />
+        </div>
+
+        <!-- Información Empresarial -->
+        <div class="col-span-12 mt-4">
+          <h6 class="text-base font-semibold mb-3 pb-2 border-b">Información Empresarial</h6>
+        </div>
+
+        <!-- Tipo de Cliente -->
+        <div class="col-span-12 md:col-span-6">
+          <label for="customer_type" class="block text-sm font-medium mb-2">
+            Tipo de Cliente <span class="text-red-500">*</span>
+          </label>
+          <select 
+            id="customer_type" 
+            formControlName="customer_type"
+            class="w-full p-inputtext"
+          >
+            <option value="INDIVIDUAL">Individual</option>
+            <option value="BUSINESS">Empresa</option>
+          </select>
+        </div>
+
+        <!-- Nombre de Empresa -->
+        <div class="col-span-12 md:col-span-6">
+          <label for="company_name" class="block text-sm font-medium mb-2">Nombre de Empresa</label>
+          <input 
+            pInputText 
+            id="company_name" 
+            formControlName="company_name"
+            placeholder="Empresa S.A."
+            [fluid]="true"
+          />
+        </div>
+
+        <!-- Estado -->
+        <div class="col-span-12">
+          <div class="flex items-center gap-2">
+            <p-checkbox 
+              formControlName="is_active" 
+              [binary]="true"
+              inputId="is_active"
+            />
+            <label for="is_active">Cliente activo</label>
+          </div>
+        </div>
+      </div>
+    </form>
+  </ng-template>
+
+  <ng-template pTemplate="footer">
+    <div class="flex gap-3 justify-end">
+      <p-button 
+        label="Cancelar" 
+        icon="pi pi-times" 
+        [outlined]="true"
+        severity="secondary"
+        (onClick)="hideDialog()"
+      />
+      <p-button 
+        label="Guardar" 
+        icon="pi pi-check" 
+        (onClick)="saveCustomer()"
+      />
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Confirm Dialog -->
+<p-confirmdialog [style]="{width: '450px'}" />

@@ -1,0 +1,73 @@
+<p-toast />
+
+<div class="surface-ground px-4 py-8 md:px-6 lg:px-8">
+  <div class="max-w-7xl mx-auto">
+    <div class="mb-6">
+      <h1 class="text-4xl font-bold text-surface-900 dark:text-surface-0">Mis Pedidos</h1>
+      <p class="text-surface-600 dark:text-surface-400 mt-2">Historial de tus pedidos</p>
+    </div>
+
+    <div class="surface-card shadow-md rounded-lg p-6">
+      <p-table
+        [value]="orders()"
+        [loading]="loading()"
+        [paginator]="true"
+        [rows]="10"
+        [rowsPerPageOptions]="[10, 25, 50]"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} pedidos"
+        [tableStyle]="{'min-width': '50rem'}"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Nº Pedido</th>
+            <th>Fecha</th>
+            <th>Estado</th>
+            <th>Total</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-order>
+          <tr>
+            <td>
+              <span class="font-semibold">#{{ order.id }}</span>
+            </td>
+            <td>{{ order.created_at | date:'dd/MM/yyyy HH:mm' }}</td>
+            <td>
+              <p-tag
+                [value]="getStatusLabel(order.status)"
+                [severity]="getStatusSeverity(order.status)"
+              />
+            </td>
+            <td>
+              <span class="font-semibold">{{ order.currency }} {{ order.total | number:'1.2-2' }}</span>
+            </td>
+            <td class="text-center">
+              <a
+                [routerLink]="['/my-orders', order.id]"
+                class="p-button p-button-sm p-button-text p-button-rounded"
+                pButton
+                icon="pi pi-eye"
+                pTooltip="Ver detalles"
+                tooltipPosition="top"
+              ></a>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="5" class="text-center py-8">
+              <div class="text-surface-500 dark:text-surface-400">
+                <i class="pi pi-shopping-cart text-6xl mb-4"></i>
+                <p class="text-xl font-semibold mb-2">No hay pedidos</p>
+                <p>Aún no has realizado ningún pedido</p>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+</div>

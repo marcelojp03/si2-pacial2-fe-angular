@@ -1,0 +1,269 @@
+<p-toast />
+
+<div class="grid grid-cols-12 gap-6">
+  <!-- Header Card -->
+  <div class="col-span-12">
+    <div class="card mb-0">
+      <div class="flex items-center justify-between">
+        <div>
+          <h5 class="text-xl font-semibold mb-1">Categorías de Productos</h5>
+          <p class="text-muted-color text-sm">Organiza tu catálogo con categorías</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  @for (stat of statsCards(); track stat.label) {
+    <div class="col-span-12 md:col-span-6 lg:col-span-3">
+      <app-stats-card [config]="stat" />
+    </div>
+  }
+
+  <!-- Tabla de Categorías -->
+  <div class="col-span-12">
+    <div class="card">
+      <!-- Toolbar -->
+      <p-toolbar styleClass="mb-6 gap-2">
+        <ng-template pTemplate="left">
+          <p-button 
+            label="Nueva" 
+            icon="pi pi-plus" 
+            class="mr-2"
+            (onClick)="openNew()"
+          />
+          <p-button 
+            label="Eliminar" 
+            icon="pi pi-trash" 
+            severity="danger"
+            [outlined]="true"
+            (onClick)="deleteSelectedCategories()"
+            [disabled]="!selectedCategories() || selectedCategories().length === 0"
+          />
+        </ng-template>
+
+        <ng-template pTemplate="right">
+          <p-button 
+            label="Exportar" 
+            icon="pi pi-upload" 
+            severity="help"
+            (onClick)="exportCSV()"
+          />
+        </ng-template>
+      </p-toolbar>
+
+      <!-- Tabla -->
+      <p-table 
+        #dt
+        [value]="categories()" 
+        [loading]="loading()"
+        [(selection)]="selectedCategories"
+        dataKey="id"
+        styleClass="p-datatable-striped"
+        [globalFilterFields]="['name', 'slug', 'description']"
+      >
+        <ng-template pTemplate="caption">
+          <div class="flex items-center justify-between">
+            <p-iconfield iconPosition="left">
+              <p-inputicon styleClass="pi pi-search" />
+              <input 
+                pInputText 
+                type="text" 
+                (input)="onGlobalFilter($event)" 
+                placeholder="Buscar categorías..." 
+              />
+            </p-iconfield>
+          </div>
+        </ng-template>
+
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="width: 4rem">
+              <p-tableHeaderCheckbox />
+            </th>
+            <th pSortableColumn="name">
+              Nombre
+              <p-sortIcon field="name" />
+            </th>
+            <th>Slug</th>
+            <th>Descripción</th>
+            <th class="text-center">Estado</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="body" let-category>
+          <tr>
+            <td>
+              <p-tableCheckbox [value]="category" />
+            </td>
+            <td>
+              <div class="font-semibold">{{ category.name }}</div>
+              @if (category.parent_name) {
+                <div class="text-xs text-muted-color">
+                  <i class="pi pi-sitemap mr-1"></i>
+                  Subcategoría de: {{ category.parent_name }}
+                </div>
+              }
+            </td>
+            <td>
+              <code class="text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                {{ category.slug }}
+              </code>
+            </td>
+            <td>
+              <span class="text-sm">{{ category.description || '-' }}</span>
+            </td>
+            <td class="text-center">
+              <p-tag 
+                [value]="category.is_active ? 'Activa' : 'Inactiva'" 
+                [severity]="category.is_active ? 'success' : 'danger'"
+              />
+            </td>
+            <td class="text-center">
+              <p-button 
+                icon="pi pi-pencil" 
+                [rounded]="true"
+                [outlined]="true"
+                class="mr-2"
+                (onClick)="editCategory(category)"
+              />
+              <p-button 
+                icon="pi pi-trash" 
+                [rounded]="true"
+                [outlined]="true"
+                severity="danger"
+                (onClick)="deleteCategory(category)"
+              />
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="6" class="text-center py-12">
+              <div class="flex flex-col items-center gap-4">
+                <i class="pi pi-folder-open text-6xl text-muted-color"></i>
+                <div>
+                  <p class="text-xl font-semibold text-muted-color mb-2">No hay categorías creadas</p>
+                  <p class="text-sm text-muted-color">Comienza organizando tu catálogo con categorías</p>
+                </div>
+                <p-button 
+                  label="Nueva Categoría" 
+                  icon="pi pi-plus"
+                  (onClick)="openNew()"
+                />
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+</div>
+
+<!-- Dialog para Crear/Editar Categoría -->
+<p-dialog 
+  [(visible)]="categoryDialog" 
+  [header]="currentCategory() ? 'Editar Categoría' : 'Nueva Categoría'"
+  [modal]="true"
+  [style]="{ width: '90vw', 'max-width': '700px' }"
+  [draggable]="false"
+  [resizable]="false"
+>
+  <ng-template pTemplate="content">
+    <form [formGroup]="categoryForm">
+      <div class="grid grid-cols-12 gap-4">
+        <!-- Información Básica -->
+        <div class="col-span-12">
+          <h6 class="text-base font-semibold mb-3 pb-2 border-b">Información Básica</h6>
+        </div>
+
+        <!-- Nombre -->
+        <div class="col-span-12 md:col-span-8">
+          <label for="name" class="block text-sm font-medium mb-2">
+            Nombre de Categoría <span class="text-red-500">*</span>
+          </label>
+          <input 
+            pInputText 
+            id="name" 
+            formControlName="name"
+            placeholder="Ej: Electrónica, Ropa, Alimentos"
+            [fluid]="true"
+            [class.ng-invalid]="submitted() && categoryForm.get('name')?.invalid"
+            [class.ng-dirty]="submitted() && categoryForm.get('name')?.invalid"
+          />
+          @if (submitted() && categoryForm.get('name')?.hasError('required')) {
+            <small class="text-red-500">El nombre es requerido</small>
+          }
+        </div>
+
+        <!-- Slug -->
+        <div class="col-span-12 md:col-span-4">
+          <label for="slug" class="block text-sm font-medium mb-2">Slug (URL)</label>
+          <input 
+            pInputText 
+            id="slug" 
+            formControlName="slug"
+            placeholder="auto-generado"
+            [fluid]="true"
+          />
+          <small class="text-muted-color text-xs">Opcional, se genera automáticamente</small>
+        </div>
+
+        <!-- Descripción -->
+        <div class="col-span-12">
+          <label for="description" class="block text-sm font-medium mb-2">Descripción</label>
+          <textarea 
+            pInputText
+            id="description" 
+            formControlName="description"
+            rows="3"
+            placeholder="Descripción breve de la categoría..."
+            class="w-full"
+          ></textarea>
+        </div>
+
+        <!-- Configuración -->
+        <div class="col-span-12 mt-4">
+          <h6 class="text-base font-semibold mb-3 pb-2 border-b">Configuración</h6>
+        </div>
+
+        <!-- Estado -->
+        <div class="col-span-12">
+          <div class="flex items-center gap-2">
+            <p-checkbox 
+              formControlName="is_active" 
+              [binary]="true"
+              inputId="is_active"
+            />
+            <label for="is_active" class="cursor-pointer">
+              Categoría activa (visible en el catálogo)
+            </label>
+          </div>
+        </div>
+      </div>
+    </form>
+  </ng-template>
+
+  <ng-template pTemplate="footer">
+    <div class="flex gap-3 justify-end">
+      <p-button 
+        label="Cancelar" 
+        icon="pi pi-times" 
+        [outlined]="true"
+        severity="secondary"
+        (onClick)="hideDialog()"
+      />
+      <p-button 
+        label="Guardar" 
+        icon="pi pi-check" 
+        (onClick)="saveCategory()"
+        [loading]="saving()"
+      />
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Confirm Dialog -->
+<p-confirmdialog [style]="{width: '450px'}" />

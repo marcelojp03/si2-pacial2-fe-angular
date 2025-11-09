@@ -1,22 +1,18 @@
 export const environment = {
   production: true,
-  backend: {
-    host: '',
-    host2: '',
-    host3: '',
-    hostx: '',
-    reportes: '',
+  api: {
+    baseUrl: 'https://your-production-api.com/api',
+    timeout: 30000,
   },
-  oauth: {
-    host2: 'http://127.0.0.1:8585/api',
-    host3: 'http://localhost:8585/api',
-    host: 'https://207.244.229.255:8510/api',
-    hostx: 'http://207.244.229.255:8520/api',
-    client_id: '2',
-    client_secret: 'tsN80QNwTawD3WZSX2uziOFI6HstTEs2bXBqsCyv',
-    scope: '*',
+  mock: false,
+  auth: {
+    tokenKey: 'ecommerce_token',
+    refreshKey: 'ecommerce_refresh',
+    userKey: 'ecommerce_user',
   },
-  movieDB: {
-    host: 'http://api.themoviedb.org/3',
+  features: {
+    enableVoiceCommands: true,
+    enableForecasting: true,
+    enableReports: true,
   }
 };
