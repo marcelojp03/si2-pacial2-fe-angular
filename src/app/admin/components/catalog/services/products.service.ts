@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import type { Product, ProductListItem, ProductFormData, ProductFilters } from '../interfaces/product.interface';
-import type { PaginatedResponse } from '../../../../core/models/catalog.model';
+import type { PaginatedResponse } from '../../../../core/models/api.model';
 
 @Injectable({
   providedIn: 'root'

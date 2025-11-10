@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import type { Order, OrderListItem, OrderFilters, UpdateOrderStatusRequest } from '../interfaces/order.interface';
-import type { PaginatedResponse } from '../../../../core/models/catalog.model';
+import type { PaginatedResponse } from '../../../../core/models/api.model';
 import type { Order as CoreOrder } from '../../../../core/models/sales.model';
 
 @Injectable({

@@ -2,7 +2,6 @@
 import { Routes } from '@angular/router';
 import { AdminComponent } from './admin.component';
 import { HomeComponent } from './components/home/home.component';
-import { AIReportsComponent } from './components/ai-reports/ai-reports.component';
 import { BackupComponent } from './components/backup/backup.component';
 import { SystemLogsComponent } from './components/system-logs/system-logs.component';
 import { OrgUsersComponent } from './components/org-users/org-users.component';
@@ -87,7 +86,11 @@ export const adminRoutes: Routes = [
       // ========================================
       // REPORTES & ANALYTICS
       // ========================================
-      { path: 'reports/ai', component: AIReportsComponent },
+      {
+        path: 'reports/ai',
+        loadComponent: () =>
+          import('./components/ai-reports/ai-reports.component').then(m => m.AIReportsComponent)
+      },
       { path: 'reports/csv', component: CSVExportComponent },
       
       // ========================================

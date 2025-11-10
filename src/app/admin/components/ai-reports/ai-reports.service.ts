@@ -1,43 +1,51 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable, map, catchError, throwError } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { AIReportRequest, AIReportResponse } from './ai-reports.interface';
+import { AIReportRequest, AIReportResponse, AIReportData, ReportFormat } from '../../../core/models/reports.model';
 
-@Injectable({
-  providedIn: 'root'
-})
-export class AIReportsService {
-  private http = inject(HttpClient);
-  private readonly API_URL = `${environment.api.baseUrl}/reports/nl`;
-
-  /**
-   * Genera un reporte usando IA a partir de lenguaje natural
-   */
-  generateReport(query: string, limit: number = 50): Observable<AIReportResponse> {
-    const request: AIReportRequest = { query, limit };
-    return this.http.post<AIReportResponse>(this.API_URL, request);
+@Injectable({ providedIn: 'root' })
+export class AiReportsService {
+  private readonly apiUrl = `${environment.api.baseUrl}/analytics/reports`;
+  constructor(private http: HttpClient) {}
+  
+  generateReport(request: AIReportRequest): Observable<AIReportResponse> {
+    return this.http.post<AIReportResponse>(`${this.apiUrl}/ai-report/`, request).pipe(
+      map(response => response),
+      catchError(error => throwError(() => new Error(error.error?.error || 'Error')))
+    );
   }
 
-  /**
-   * Exporta el reporte a CSV
-   */
-  exportToCSV(query: string, limit: number = 100): Observable<Blob> {
-    const request: AIReportRequest = { query, limit };
-    return this.http.post(`${this.API_URL}/csv`, request, {
-      responseType: 'blob'
-    });
+  downloadReport(request: AIReportRequest): Observable<Blob> {
+    const headers = new HttpHeaders({ Accept: this.getAcceptHeader(request.format) });
+    return this.http.post(`${this.apiUrl}/ai-report/`, request, { headers, responseType: 'blob', observe: 'response' }).pipe(
+      map(response => response.body!),
+      catchError(() => throwError(() => new Error('Error al descargar')))
+    );
   }
 
-  /**
-   * Descarga el archivo CSV
-   */
-  downloadCSV(blob: Blob, filename: string = 'reporte.csv'): void {
+  convertToCSV(data: AIReportData): string {
+    if (!data.columns || !data.rows || data.rows.length === 0) return '';
+    const header = data.columns.join(',');
+    const rows = data.rows.map(row => data.columns.map(col => row[col as keyof typeof row]).join(','));
+    return [header, ...rows].join('\n');
+  }
+
+  downloadCSV(content: string, filename = 'reporte.csv'): void {
+    this.downloadFile(new Blob([content], { type: 'text/csv' }), filename, 'csv');
+  }
+
+  downloadFile(blob: Blob, filename: string, format: ReportFormat): void {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = filename;
+    link.download = `${filename}.${format === 'excel' ? 'xlsx' : format}`;
     link.click();
     window.URL.revokeObjectURL(url);
+  }
+
+  private getAcceptHeader(format: ReportFormat): string {
+    const headers = { json: 'application/json', csv: 'text/csv', excel: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', pdf: 'application/pdf' };
+    return headers[format];
   }
 }

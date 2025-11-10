@@ -1,3 +1,4 @@
+$authServiceContent = @"
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError, of } from 'rxjs';
@@ -23,7 +24,7 @@ export class AuthService {
   private apiUrl = environment.api.baseUrl;
   
   private currentUserSubject = new BehaviorSubject<User | null>(this.getUserFromStorage());
-  public currentUser$ = this.currentUserSubject.asObservable();
+  public currentUser`$ = this.currentUserSubject.asObservable();
 
   private readonly ACCESS_TOKEN_KEY = 'access_token';
   private readonly REFRESH_TOKEN_KEY = 'refresh_token';
@@ -46,7 +47,7 @@ export class AuthService {
   login(username: string, password: string): Observable<LoginResponse> {
     const credentials: LoginRequest = { username, password };
     
-    return this.http.post<LoginResponse>(`${this.apiUrl}/auth/token/`, credentials)
+    return this.http.post<LoginResponse>(`$`{this.apiUrl}/auth/token/`, credentials)
       .pipe(
         tap(response => {
           this.saveTokens(response.access, response.refresh);
@@ -60,7 +61,7 @@ export class AuthService {
   }
 
   register(request: RegisterRequest): Observable<User> {
-    return this.http.post<User>(`${this.apiUrl}/auth/register/`, request)
+    return this.http.post<User>(`$`{this.apiUrl}/auth/register/`, request)
       .pipe(
         catchError(error => {
           console.error('[AuthService] Error en registro:', error);
@@ -78,7 +79,7 @@ export class AuthService {
 
     const request: RefreshTokenRequest = { refresh: refreshToken };
     
-    return this.http.post<RefreshTokenResponse>(`${this.apiUrl}/auth/token/refresh/`, request)
+    return this.http.post<RefreshTokenResponse>(`$`{this.apiUrl}/auth/token/refresh/`, request)
       .pipe(
         tap(response => {
           this.saveTokens(response.access, response.refresh);
@@ -94,7 +95,7 @@ export class AuthService {
   verifyToken(token: string): Observable<boolean> {
     const request: TokenVerifyRequest = { token };
     
-    return this.http.post(`${this.apiUrl}/auth/token/verify/`, request)
+    return this.http.post(`$`{this.apiUrl}/auth/token/verify/`, request)
       .pipe(
         map(() => true),
         catchError(() => of(false))
@@ -102,7 +103,7 @@ export class AuthService {
   }
 
   loadCurrentUser(): Observable<User> {
-    return this.http.get<User>(`${this.apiUrl}/auth/me/`)
+    return this.http.get<User>(`$`{this.apiUrl}/auth/me/`)
       .pipe(
         tap(user => {
           this.saveUser(user);
@@ -116,7 +117,7 @@ export class AuthService {
   }
 
   logout(): void {
-    this.http.post(`${this.apiUrl}/auth/logout/`, {})
+    this.http.post(`$`{this.apiUrl}/auth/logout/`, {})
       .pipe(catchError(() => of(null)))
       .subscribe();
 
@@ -221,3 +222,9 @@ export class AuthService {
     this.clearStorage();
   }
 }
+"@
+
+# Escribir el archivo
+$authServiceContent | Out-File -FilePath "src\app\core\services\auth.service.ts" -Encoding UTF8
+
+Write-Host "AuthService creado exitosamente"

@@ -86,9 +86,4 @@ export interface ProductListItem {
   };
 }
 
-export interface PaginatedResponse<T> {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: T[];
-}
+// PaginatedResponse está en api.model.ts para evitar duplicados

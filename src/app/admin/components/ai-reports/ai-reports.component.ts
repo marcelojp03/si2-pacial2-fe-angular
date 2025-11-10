@@ -1,176 +1,121 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
-import { SharedModule } from '../../../shared/shared.module';
-import { AIReportsService } from './ai-reports.service';
-import { SubscriptionService } from '../subscription/subscription.service';
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
-import { AIReportResponse } from './ai-reports.interface';
+import { CardModule } from 'primeng/card';
+import { Textarea } from 'primeng/textarea';
+import { ButtonModule } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { TableModule } from 'primeng/table';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { ToastModule } from 'primeng/toast';
+import { DividerModule } from 'primeng/divider';
+import { ChipModule } from 'primeng/chip';
+import { AiReportsService } from './ai-reports.service';
+import { AIReportRequest, AIReportResponse, ReportFormat, AI_REPORT_EXAMPLES, REPORT_TEMPLATES } from '../../../core/models/reports.model';
 
 @Component({
   selector: 'app-ai-reports',
   standalone: true,
-  imports: [SharedModule],
+  imports: [CommonModule, FormsModule, CardModule, Textarea, ButtonModule, Select, TableModule, ProgressSpinnerModule, ToastModule, DividerModule, ChipModule],
   providers: [MessageService],
   templateUrl: './ai-reports.component.html',
-  styles: [`
-    :host ::ng-deep {
-      .query-textarea {
-        min-height: 120px;
-      }
-      .sql-display {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 1rem;
-        font-family: 'Courier New', monospace;
-        font-size: 0.9rem;
-      }
-    }
-  `]
+  styleUrls: ['./ai-reports.component.scss']
 })
 export class AIReportsComponent implements OnInit {
-  private aiService = inject(AIReportsService);
-  private subscriptionService = inject(SubscriptionService);
-  private messageService = inject(MessageService);
-
-  // Signals
-  query = signal('');
-  limit = signal(50);
-  loading = signal(false);
-  result = signal<AIReportResponse['data'] | null>(null);
+  query = '';
+  selectedFormat: ReportFormat = 'json';
+  selectedTemplate = '';
+  reportData: AIReportResponse | null = null;
+  isLoading = false;
   
-  // Usage stats
-  usageToday = signal(0);
-  usageLimit = signal(10);
-  usagePercentage = signal(0);
-
-  // Ejemplos de consultas
-  exampleQueries = [
-    '¿Cuántos productos tengo en stock bajo mínimo?',
-    'Muéstrame los 10 productos con menos stock',
-    '¿Cuántos movimientos de entrada hubo esta semana?',
-    'Lista de proveedores activos con sus productos',
-    'Total de usuarios por rol en mi organización',
-    'Últimos 20 logs del sistema',
-    '¿Cuántos productos tengo en cada almacén?',
-    'Proveedores con más de 5 productos asociados'
+  formatOptions = [
+    { label: 'JSON', value: 'json', icon: 'pi pi-file' },
+    { label: 'CSV', value: 'csv', icon: 'pi pi-file-excel' },
+    { label: 'Excel', value: 'excel', icon: 'pi pi-file-excel' },
+    { label: 'PDF', value: 'pdf', icon: 'pi pi-file-pdf' }
   ];
+  
+  templateCategories: any[] = [];
+  quickExamples = AI_REPORT_EXAMPLES;
+
+  constructor(private aiReportsService: AiReportsService, private messageService: MessageService) {}
 
   ngOnInit(): void {
-    this.loadUsageStats();
+    this.templateCategories = REPORT_TEMPLATES.map(c => ({
+      label: c.category,
+      items: c.queries.map(q => ({ label: q, value: q }))
+    }));
   }
 
-  loadUsageStats(): void {
-    this.subscriptionService.getSubscription().subscribe({
-      next: (response: any) => {
-        if (response.success && response.data.usage) {
-          const aiUsage = response.data.usage.ai_reports_today;
-          if (aiUsage) {
-            this.usageToday.set(aiUsage.current);
-            this.usageLimit.set(aiUsage.limit);
-            this.usagePercentage.set(
-              this.subscriptionService.getUsagePercentage(aiUsage.current, aiUsage.limit)
-            );
-          }
-        }
-      },
-      error: (err: any) => {
-        console.error('Error loading usage stats:', err);
-      }
-    });
+  onTemplateSelect(): void {
+    if (this.selectedTemplate) this.query = this.selectedTemplate;
+  }
+
+  applyExample(example: string): void {
+    this.query = example;
   }
 
   generateReport(): void {
-    if (!this.query().trim()) {
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Consulta Vacía',
-        detail: 'Por favor ingrese una consulta'
-      });
+    if (!this.query.trim()) {
+      this.messageService.add({ severity: 'warn', summary: 'Query requerida', detail: 'Por favor ingresa una consulta' });
       return;
     }
-
-    this.loading.set(true);
-    this.result.set(null);
-
-    this.aiService.generateReport(this.query(), this.limit()).subscribe({
-      next: (response: any) => {
-        if (response.success) {
-          this.result.set(response.data);
-          this.loadUsageStats(); // Actualizar contador
-          
-          this.messageService.add({
-            severity: 'success',
-            summary: 'Reporte Generado',
-            detail: `${response.data.row_count} resultados en ${response.data.took_ms}ms`
-          });
-        }
-        this.loading.set(false);
+    this.isLoading = true;
+    this.reportData = null;
+    this.aiReportsService.generateReport({ query: this.query.trim(), format: this.selectedFormat }).subscribe({
+      next: (r) => {
+        this.reportData = r;
+        this.isLoading = false;
+        this.messageService.add({ severity: 'success', summary: 'Reporte generado', detail: `${r.data.row_count} filas` });
       },
-      error: (err: any) => {
-        this.loading.set(false);
-        
-        let errorMessage = 'Error al generar reporte';
-        if (err.status === 429) {
-          errorMessage = 'Límite de reportes AI alcanzado para hoy. Mejora tu plan para más consultas.';
-        } else if (err.error?.message) {
-          errorMessage = err.error.message;
-        }
-
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: errorMessage,
-          life: 5000
-        });
+      error: (e) => {
+        this.isLoading = false;
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: e.message });
       }
     });
   }
 
-  exportToCSV(): void {
-    if (!this.query().trim()) {
+  downloadReport(): void {
+    if (!this.reportData) return;
+    if (this.selectedFormat === 'json') {
+      this.aiReportsService.downloadFile(new Blob([JSON.stringify(this.reportData.data, null, 2)]), 'reporte', 'json');
       return;
     }
-
-    this.loading.set(true);
-
-    this.aiService.exportToCSV(this.query(), this.limit()).subscribe({
+    if (this.selectedFormat === 'csv') {
+      this.aiReportsService.downloadCSV(this.aiReportsService.convertToCSV(this.reportData.data), 'reporte.csv');
+      return;
+    }
+    this.isLoading = true;
+    this.aiReportsService.downloadReport({ query: this.query.trim(), format: this.selectedFormat }).subscribe({
       next: (blob) => {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        this.aiService.downloadCSV(blob, `reporte-ai-${timestamp}.csv`);
-        
-        this.messageService.add({
-          severity: 'success',
-          summary: 'CSV Exportado',
-          detail: 'El archivo se ha descargado correctamente'
-        });
-        
-        this.loading.set(false);
+        this.aiReportsService.downloadFile(blob, 'reporte', this.selectedFormat);
+        this.isLoading = false;
+        this.messageService.add({ severity: 'success', summary: 'Descargado' });
       },
-      error: (err: any) => {
-        this.loading.set(false);
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error al Exportar',
-          detail: 'No se pudo generar el archivo CSV'
-        });
+      error: () => {
+        this.isLoading = false;
+        this.messageService.add({ severity: 'error', summary: 'Error' });
       }
     });
   }
 
-  useExample(example: string): void {
-    this.query.set(example);
+  clearForm(): void {
+    this.query = '';
+    this.selectedFormat = 'json';
+    this.selectedTemplate = '';
+    this.reportData = null;
   }
 
-  clearResults(): void {
-    this.result.set(null);
-    this.query.set('');
+  get hasResults(): boolean {
+    return this.reportData !== null && this.reportData.data.rows.length > 0;
   }
 
-  getTableData(): any[] {
-    if (!this.result()) return [];
-    return this.result()!.rows;
+  get columns(): string[] {
+    return this.reportData?.data.columns || [];
   }
 
-  getUsageSeverity(): 'success' | 'info' | 'warn' | 'danger' {
-    return this.subscriptionService.getUsageSeverity(this.usagePercentage());
+  get rows(): any[] {
+    return this.reportData?.data.rows || [];
   }
 }

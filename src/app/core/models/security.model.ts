@@ -1,27 +1,7 @@
 // ========================================
-// SECURITY MODELS
+// SECURITY MODELS (RBAC)
 // ========================================
-
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  full_name: string;
-  role?: Role;
-  is_active: boolean;
-}
-
-export interface LoginRequest {
-  username: string;
-  password: string;
-}
-
-export interface LoginResponse {
-  user: User;
-  message: string;
-  access_token?: string;
-  refresh_token?: string;
-}
+// Nota: User, LoginRequest, LoginResponse están en auth.model.ts
 
 export interface ChangePasswordRequest {
   old_password: string;
@@ -71,9 +51,10 @@ export interface RoleResource {
   can_delete: boolean;
 }
 
-export interface MenuItem {
+// MenuItem está en auth.model.ts para evitar duplicados
+export interface MenuItemLegacy {
   label: string;
   icon?: string;
   routerLink?: string;
-  items?: MenuItem[];
+  items?: MenuItemLegacy[];
 }
