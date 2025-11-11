@@ -265,7 +265,7 @@ export class ProductsListComponent implements OnInit {
   }
 
   viewProduct(id: number) {
-    this.router.navigate(['/admin/products', id]);
+    this.router.navigate(['/products', id]);
   }
 
   addToCart(product: ProductListItem) {
@@ -293,6 +293,6 @@ export class ProductsListComponent implements OnInit {
   }
 
   goToCart() {
-    this.router.navigate(['/admin/cart']);
+    this.router.navigate(['/cart']);
   }
 }

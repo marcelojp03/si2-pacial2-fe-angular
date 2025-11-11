@@ -8,7 +8,10 @@ import { RippleModule } from 'primeng/ripple';
   selector: 'app-topbar-widget',
   standalone: true,
   imports: [
-    SharedModule
+    SharedModule,
+    RouterModule,
+    StyleClassModule,
+    RippleModule
   ],
   template: `
     <a class="flex items-center cursor-pointer" (click)="scrollTo('home')">
@@ -25,29 +28,29 @@ import { RippleModule } from 'primeng/ripple';
     <div class="items-center bg-surface-0 dark:bg-surface-900 grow justify-between hidden lg:flex absolute lg:static w-full left-0 top-full px-12 lg:px-0 z-20 rounded-border">
       <ul class="list-none p-0 m-0 flex lg:items-center select-none flex-col lg:flex-row cursor-pointer gap-8">
         <li>
-          <a (click)="scrollTo('home')" pRipple class="px-0 py-4 text-surface-900 dark:text-surface-0 font-medium text-xl hover:text-primary transition-colors">
+          <a routerLink="/" pRipple class="px-0 py-4 text-surface-900 dark:text-surface-0 font-medium text-xl hover:text-primary transition-colors">
             <span>Inicio</span>
           </a>
         </li>
         <li>
-          <a (click)="scrollTo('features')" pRipple class="px-0 py-4 text-surface-900 dark:text-surface-0 font-medium text-xl hover:text-primary transition-colors">
-            <span>Características</span>
+          <a routerLink="/products" pRipple class="px-0 py-4 text-surface-900 dark:text-surface-0 font-medium text-xl hover:text-primary transition-colors">
+            <span>Productos</span>
           </a>
         </li>
         <li>
-          <a (click)="scrollTo('highlights')" pRipple class="px-0 py-4 text-surface-900 dark:text-surface-0 font-medium text-xl hover:text-primary transition-colors">
-            <span>Beneficios</span>
+          <a routerLink="/cart" pRipple class="px-0 py-4 text-surface-900 dark:text-surface-0 font-medium text-xl hover:text-primary transition-colors">
+            <span>Carrito</span>
           </a>
         </li>
         <li>
-          <a (click)="scrollTo('pricing')" pRipple class="px-0 py-4 text-surface-900 dark:text-surface-0 font-medium text-xl hover:text-primary transition-colors">
-            <span>Planes</span>
+          <a routerLink="/my-orders" pRipple class="px-0 py-4 text-surface-900 dark:text-surface-0 font-medium text-xl hover:text-primary transition-colors">
+            <span>Mis Pedidos</span>
           </a>
         </li>
       </ul>
       <div class="flex border-t lg:border-t-0 border-surface py-4 lg:py-0 mt-4 lg:mt-0 gap-2">
         <button pButton pRipple label="Iniciar Sesión" routerLink="/auth/login" [rounded]="true" [text]="true"></button>
-        <button pButton pRipple label="Registrarse" routerLink="/auth/register" [rounded]="true"></button>
+        <button pButton pRipple label="Admin" routerLink="/admin" [rounded]="true" icon="pi pi-cog"></button>
       </div>
     </div>
   `
