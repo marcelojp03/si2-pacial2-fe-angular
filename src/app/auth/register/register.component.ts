@@ -8,7 +8,7 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SharedModule } from '../../shared/shared.module';
-import { SignupRequest } from '../interfaces/signup.interface';
+import { RegisterRequest, User } from '../../core/models/auth.model';
 import { MessageService } from 'primeng/api';
 
 
@@ -58,39 +58,39 @@ export class RegisterComponent implements OnInit {
 
     this.loading = true;
 
-    // Sprint 2: Usar endpoint de signup
-    const signupRequest: SignupRequest = {
-      org_name: this.form.value.orgName,
-      admin_email: this.form.value.email,
-      admin_password: this.form.value.password,
-      admin_full_name: this.form.value.fullName,
-      plan_code: this.selectedPlan.toUpperCase()
+    // Register with JWT auth
+    const registerRequest: RegisterRequest = {
+      username: this.form.value.email,
+      email: this.form.value.email,
+      password: this.form.value.password,
+      first_name: this.form.value.fullName?.split(' ')[0] || '',
+      last_name: this.form.value.fullName?.split(' ').slice(1).join(' ') || ''
     };
 
     this.registerSubscription = this.authService
-      .signup(signupRequest)
+      .register(registerRequest)
       .subscribe({
-        next: (response) => {
-          console.log("Signup exitoso:", response);
+        next: (user: User) => {
+          console.log("Registro exitoso:", user);
           this.messageService.add({
             severity: 'success',
             summary: 'Registro Exitoso',
-            detail: `Bienvenido a ${response.data.plan.name}`
+            detail: `Bienvenido ${user.first_name}. Ya puedes iniciar sesión.`
           });
           
-          // Redirigir al dashboard después de 1.5 segundos
+          // Redirigir al login después de 2 segundos
           setTimeout(() => {
-            this.router.navigate(['/dashboard']);
-          }, 1500);
+            this.router.navigate(['/auth/login']);
+          }, 2000);
         },
-        error: (error) => {
-          console.error('Error en signup:', error);
+        error: (error: any) => {
+          console.error('Error en registro:', error);
           this.loading = false;
           
-          let errorMessage = 'Error al registrar la organización';
-          if (error.error?.message) {
-            errorMessage = error.error.message;
-          } else if (error.status === 409) {
+          let errorMessage = 'Error al registrar el usuario';
+          if (error.error?.username) {
+            errorMessage = 'El nombre de usuario ya está en uso';
+          } else if (error.error?.email) {
             errorMessage = 'El email ya está registrado';
           } else if (error.status === 0) {
             errorMessage = 'No se pudo conectar con el servidor';

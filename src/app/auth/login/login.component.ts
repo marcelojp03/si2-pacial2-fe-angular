@@ -89,51 +89,33 @@ export class LoginComponent implements OnInit {
     else localStorage.removeItem('remembered_email');
 
     this.loginSubscription = this.authService
-      .loginWithUserCredentials(email, password)
+      .login(email, password)
       .pipe(finalize(() => {
         this.loginLoading = false;
         this.form.enable();
       }))
       .subscribe({
-        next: (response: LoginSuccessResponse | LoginErrorResponse) => {
+        next: (response) => {
           console.info("LOGIN RESPONSE: ", response);
-          
-          if (response.success) {
-            const successResponse = response as LoginSuccessResponse;
-            
-            // Save authentication data using the new service method
-            this.authService.saveAuthData(successResponse);
 
-            // Success message
-            this.messageService.add({
-              key: 'br',
-              severity: 'success',
-              summary: 'Sesión iniciada correctamente',
-              detail: `Bienvenido, ${successResponse.data.user.name}`,
-              life: 3500
-            });
+          // Success message
+          this.messageService.add({
+            key: 'br',
+            severity: 'success',
+            summary: 'Sesión iniciada correctamente',
+            detail: 'Redirigiendo al panel de administración...',
+            life: 3500
+          });
 
-            // Redirect after a brief delay to show the toast
-            setTimeout(() => this.router.navigateByUrl('/dashboard'), 1500);
-          } else {
-            const errorResponse = response as LoginErrorResponse;
-            const msg = errorResponse.message || 'Credenciales inválidas';
-            
-            this.messageService.add({
-              key: 'br',
-              severity: 'error',
-              summary: 'Error de autenticación',
-              detail: msg,
-              life: 3000
-            });
-          }
+          // Redirect after a brief delay to show the toast
+          setTimeout(() => this.router.navigateByUrl('/admin'), 1500);
         },
         error: (error: any) => {
           this.messageService.add({
             key: 'br',
             severity: 'error',
-            summary: 'Error de conexión',
-            detail: 'No se pudo conectar con el servidor',
+            summary: 'Error de autenticación',
+            detail: error.error?.detail || 'Credenciales inválidas',
             life: 3000
           });
           console.error("ERROR AL INICIAR SESION", error);

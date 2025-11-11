@@ -44,7 +44,7 @@
           </div>
           <div class="col-12 md:col-4">
             <div class="text-500">Filas</div>
-            <div class="font-semibold">{{ reportData?.data.row_count }}</div>
+            <div class="font-semibold">{{ reportData?.data?.row_count }}</div>
           </div>
         </div>
         <p-card *ngIf="reportData?.interpretation" class="mb-3">
@@ -54,7 +54,7 @@
               <span class="font-semibold">Interpretación</span>
             </div>
           </ng-template>
-          <p>{{ reportData.interpretation }}</p>
+          <p>{{ reportData?.interpretation }}</p>
         </p-card>
         <p-table [value]="rows" [scrollable]="true" scrollHeight="400px">
           <ng-template pTemplate="header">
