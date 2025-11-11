@@ -59,7 +59,7 @@ import type { ProductListItem, Category } from '../../../core/models';
         </div>
       }
 
-      <!-- Productos Destacados -->
+      <!-- Carousel de Productos Destacados -->
       @if (featuredProducts().length > 0) {
         <div class="mb-12">
           <div class="flex justify-between items-center mb-6">
@@ -73,75 +73,71 @@ import type { ProductListItem, Category } from '../../../core/models';
             />
           </div>
 
-          <div class="grid">
-            @for (product of featuredProducts(); track product.id) {
-              <div class="col-12 sm:col-6 lg:col-4 xl:col-3 p-2">
-                <div class="border-surface-200 dark:border-surface-700 surface-card rounded-xl border p-4 hover:shadow-lg transition-all">
-                  <!-- Imagen -->
-                  <div class="relative mb-3">
+          <p-carousel 
+            [value]="featuredProducts()" 
+            [numVisible]="4" 
+            [numScroll]="1" 
+            [circular]="true"
+            [autoplayInterval]="5000"
+            [responsiveOptions]="carouselResponsiveOptions"
+          >
+            <ng-template let-product pTemplate="item">
+              <div class="border border-surface rounded-border m-2 p-4 hover:shadow-lg transition-shadow">
+                <div class="mb-4">
+                  <div class="relative mx-auto">
                     @if (product.main_image) {
                       <img 
                         [src]="product.main_image" 
                         [alt]="product.name"
-                        class="w-full h-48 object-cover rounded-xl cursor-pointer"
+                        class="w-full rounded-border cursor-pointer"
+                        style="max-height: 200px; object-fit: cover;"
                         (click)="viewProduct(product.id)"
                       />
                     } @else {
-                      <div class="w-full h-48 bg-surface-100 dark:bg-surface-800 rounded-xl flex items-center justify-center cursor-pointer"
+                      <div class="w-full h-48 bg-surface-100 dark:bg-surface-800 rounded-border flex items-center justify-center cursor-pointer"
                            (click)="viewProduct(product.id)">
                         <i class="pi pi-image text-4xl text-muted-color"></i>
                       </div>
                     }
-                    <p-tag 
-                      value="Destacado" 
-                      severity="success"
-                      icon="pi pi-star"
-                      class="absolute top-2 right-2"
-                    />
+                    <div class="absolute bg-black/70 rounded-border" style="left: 5px; top: 5px;">
+                      <p-tag value="Destacado" severity="success" icon="pi pi-star" />
+                    </div>
                   </div>
+                </div>
 
-                  <!-- Info -->
-                  <div class="mb-3">
-                    <h4 class="text-lg font-semibold mb-2 truncate cursor-pointer hover:text-primary"
-                        (click)="viewProduct(product.id)">
-                      {{ product.name }}
-                    </h4>
-                    <p class="text-sm text-muted-color line-clamp-2 mb-2">
-                      {{ product.description || 'Sin descripción' }}
-                    </p>
-                    @if (product.price_range) {
-                      <div class="text-xl font-bold text-primary">
-                        @if (product.price_range.min === product.price_range.max) {
-                          Bs. {{ product.price_range.min | number:'1.2-2' }}
-                        } @else {
-                          Bs. {{ product.price_range.min | number:'1.2-2' }} - {{ product.price_range.max | number:'1.2-2' }}
-                        }
-                      </div>
-                    }
-                  </div>
-
-                  <!-- Acciones -->
-                  <div class="flex gap-2">
+                <div class="mb-4 font-medium cursor-pointer hover:text-primary"
+                     (click)="viewProduct(product.id)">
+                  {{ product.name }}
+                </div>
+                
+                <div class="flex justify-between items-center">
+                  @if (product.price_range) {
+                    <div class="mt-0 font-semibold text-xl">
+                      @if (product.price_range.min === product.price_range.max) {
+                        Bs. {{ product.price_range.min | number:'1.2-2' }}
+                      } @else {
+                        Bs. {{ product.price_range.min | number:'1.2-2' }}
+                      }
+                    </div>
+                  }
+                  <span>
                     <p-button 
-                      label="Ver" 
-                      icon="pi pi-eye"
+                      icon="pi pi-eye" 
+                      severity="secondary"
                       [outlined]="true"
-                      size="small"
-                      class="flex-1"
                       (onClick)="viewProduct(product.id)"
                     />
                     <p-button 
                       icon="pi pi-shopping-cart"
-                      severity="success"
-                      size="small"
+                      styleClass="ml-2"
                       (onClick)="addToCart(product)"
                       [loading]="addingToCart() === product.id"
                     />
-                  </div>
+                  </span>
                 </div>
               </div>
-            }
-          </div>
+            </ng-template>
+          </p-carousel>
         </div>
       }
 
@@ -291,4 +287,28 @@ export class ShoppingHomeComponent implements OnInit {
     });
     setTimeout(() => this.addingToCart.set(null), 500);
   }
+
+  // Responsive options for carousel
+  carouselResponsiveOptions = [
+    {
+      breakpoint: '1400px',
+      numVisible: 4,
+      numScroll: 1
+    },
+    {
+      breakpoint: '1024px',
+      numVisible: 3,
+      numScroll: 1
+    },
+    {
+      breakpoint: '768px',
+      numVisible: 2,
+      numScroll: 1
+    },
+    {
+      breakpoint: '560px',
+      numVisible: 1,
+      numScroll: 1
+    }
+  ];
 }

@@ -62,7 +62,7 @@ import type { ProductListItem, Category } from '../../../core/models';
         />
       </div>
 
-      <!-- Lista de productos -->
+      <!-- Lista de productos con DataView -->
       @if (loading()) {
         <div class="grid">
           @for (i of [1,2,3,4,5,6]; track i) {
@@ -76,85 +76,186 @@ import type { ProductListItem, Category } from '../../../core/models';
           [value]="products()" 
           [paginator]="true" 
           [rows]="12"
-          layout="grid"
+          [layout]="layout"
         >
           <ng-template pTemplate="header">
             <div class="flex justify-between items-center">
               <span class="text-muted-color">{{ totalProducts() }} productos encontrados</span>
+              <p-select-button 
+                [(ngModel)]="layout" 
+                [options]="layoutOptions" 
+                [allowEmpty]="false"
+              >
+                <ng-template pTemplate="item" let-option>
+                  <i class="pi" [ngClass]="{ 'pi-bars': option === 'list', 'pi-th-large': option === 'grid' }"></i>
+                </ng-template>
+              </p-select-button>
             </div>
           </ng-template>
 
+          <!-- Vista Grid -->
           <ng-template let-product pTemplate="gridItem">
             <div class="col-12 sm:col-6 lg:col-4 xl:col-3 p-2">
-              <div class="border-surface-200 dark:border-surface-700 surface-card rounded-xl border p-4 hover:shadow-lg transition-all">
+              <div class="p-6 border border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900 rounded flex flex-col hover:shadow-lg transition-shadow">
                 <!-- Imagen -->
-                <div class="relative mb-3">
-                  @if (product.main_image) {
-                    <img 
-                      [src]="product.main_image" 
-                      [alt]="product.name"
-                      class="w-full h-48 object-cover rounded-xl cursor-pointer"
-                      (click)="viewProduct(product.id)"
-                    />
-                  } @else {
-                    <div class="w-full h-48 bg-surface-100 dark:bg-surface-800 rounded-xl flex items-center justify-center cursor-pointer"
-                         (click)="viewProduct(product.id)">
-                      <i class="pi pi-image text-4xl text-muted-color"></i>
-                    </div>
-                  }
+                <div class="bg-surface-50 flex justify-center rounded p-4 mb-4">
+                  <div class="relative mx-auto w-full">
+                    @if (product.main_image) {
+                      <img 
+                        [src]="product.main_image" 
+                        [alt]="product.name"
+                        class="rounded w-full cursor-pointer"
+                        style="max-width: 300px; max-height: 200px; object-fit: contain;"
+                        (click)="viewProduct(product.id)"
+                      />
+                    } @else {
+                      <div class="w-full h-48 bg-surface-100 dark:bg-surface-800 rounded flex items-center justify-center cursor-pointer"
+                           (click)="viewProduct(product.id)">
+                        <i class="pi pi-image text-4xl text-muted-color"></i>
+                      </div>
+                    }
 
-                  @if (product.is_featured) {
-                    <p-tag 
-                      value="Destacado" 
-                      severity="success"
-                      icon="pi pi-star"
-                      class="absolute top-2 right-2"
-                    />
-                  }
+                    @if (product.is_featured) {
+                      <div class="absolute bg-black/70 rounded-border" style="left: 4px; top: 4px;">
+                        <p-tag value="Destacado" severity="success" icon="pi pi-star" />
+                      </div>
+                    }
+                  </div>
                 </div>
 
                 <!-- Info -->
-                <div class="mb-3">
-                  <div class="text-xs text-muted-color mb-1">
-                    {{ product.category_names?.join(' > ') || 'Sin categoría' }}
+                <div class="pt-4">
+                  <div class="flex flex-row justify-between items-start gap-2 mb-3">
+                    <div class="flex-1">
+                      <span class="font-medium text-surface-500 dark:text-surface-400 text-sm">
+                        {{ product.category_names?.[0] || 'Sin categoría' }}
+                      </span>
+                      <div class="text-lg font-medium mt-1 cursor-pointer hover:text-primary"
+                           (click)="viewProduct(product.id)">
+                        {{ product.name }}
+                      </div>
+                    </div>
+                    @if (product.stock_status) {
+                      <div class="bg-surface-100 p-1" style="border-radius: 30px">
+                        <div class="bg-surface-0 flex items-center gap-2 justify-center py-1 px-2" 
+                             style="border-radius: 30px; box-shadow: 0px 1px 2px 0px rgba(0, 0, 0, 0.04);">
+                          <i class="pi pi-check-circle text-green-500"></i>
+                          <span class="text-surface-900 font-medium text-xs">Stock</span>
+                        </div>
+                      </div>
+                    }
                   </div>
-                  <h4 class="text-lg font-semibold mb-2 truncate cursor-pointer hover:text-primary"
-                      (click)="viewProduct(product.id)">
-                    {{ product.name }}
-                  </h4>
-                  <p class="text-sm text-muted-color line-clamp-2 mb-2">
-                    {{ product.description || 'Sin descripción' }}
-                  </p>
 
-                  <!-- Precio -->
+                  <div class="flex flex-col gap-4">
+                    <!-- Precio -->
+                    @if (product.price_range) {
+                      <span class="text-2xl font-semibold">
+                        @if (product.price_range.min === product.price_range.max) {
+                          Bs. {{ product.price_range.min | number:'1.2-2' }}
+                        } @else {
+                          Bs. {{ product.price_range.min | number:'1.2-2' }} - {{ product.price_range.max | number:'1.2-2' }}
+                        }
+                      </span>
+                    }
+
+                    <!-- Acciones -->
+                    <div class="flex gap-2">
+                      <p-button 
+                        icon="pi pi-shopping-cart"
+                        label="Añadir"
+                        styleClass="w-full"
+                        (onClick)="addToCart(product)"
+                        [loading]="addingToCart() === product.id"
+                      />
+                      <p-button 
+                        icon="pi pi-eye"
+                        styleClass="h-full"
+                        [outlined]="true"
+                        (onClick)="viewProduct(product.id)"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ng-template>
+
+          <!-- Vista Lista -->
+          <ng-template let-product pTemplate="listItem">
+            <div class="flex flex-col sm:flex-row sm:items-center p-6 gap-4 border-t border-surface">
+              <div class="md:w-40 relative">
+                @if (product.main_image) {
+                  <img 
+                    class="block mx-auto rounded w-full cursor-pointer"
+                    [src]="product.main_image" 
+                    [alt]="product.name"
+                    (click)="viewProduct(product.id)"
+                  />
+                } @else {
+                  <div class="w-full h-32 bg-surface-100 dark:bg-surface-800 rounded flex items-center justify-center cursor-pointer"
+                       (click)="viewProduct(product.id)">
+                    <i class="pi pi-image text-3xl text-muted-color"></i>
+                  </div>
+                }
+                
+                @if (product.is_featured) {
+                  <div class="absolute bg-black/70 rounded-border" style="left: 4px; top: 4px;">
+                    <p-tag value="Destacado" severity="success" />
+                  </div>
+                }
+              </div>
+
+              <div class="flex flex-col md:flex-row justify-between md:items-center flex-1 gap-6">
+                <div class="flex flex-row md:flex-col justify-between items-start gap-2">
+                  <div>
+                    <span class="font-medium text-surface-500 dark:text-surface-400 text-sm">
+                      {{ product.category_names?.join(' > ') || 'Sin categoría' }}
+                    </span>
+                    <div class="text-lg font-medium mt-2 cursor-pointer hover:text-primary"
+                         (click)="viewProduct(product.id)">
+                      {{ product.name }}
+                    </div>
+                    <p class="text-sm text-muted-color mt-2 line-clamp-2">
+                      {{ product.description || 'Sin descripción disponible' }}
+                    </p>
+                  </div>
+                  @if (product.stock_status) {
+                    <div class="bg-surface-100 p-1" style="border-radius: 30px">
+                      <div class="bg-surface-0 flex items-center gap-2 justify-center py-1 px-2"
+                           style="border-radius: 30px; box-shadow: 0px 1px 2px 0px rgba(0, 0, 0, 0.04);">
+                        <span class="text-surface-900 font-medium text-sm">En Stock</span>
+                        <i class="pi pi-check-circle text-green-500"></i>
+                      </div>
+                    </div>
+                  }
+                </div>
+
+                <div class="flex flex-col md:items-end gap-8">
                   @if (product.price_range) {
-                    <div class="text-xl font-bold text-primary">
+                    <span class="text-xl font-semibold">
                       @if (product.price_range.min === product.price_range.max) {
                         Bs. {{ product.price_range.min | number:'1.2-2' }}
                       } @else {
                         Bs. {{ product.price_range.min | number:'1.2-2' }} - {{ product.price_range.max | number:'1.2-2' }}
                       }
-                    </div>
+                    </span>
                   }
-                </div>
 
-                <!-- Acciones -->
-                <div class="flex gap-2">
-                  <p-button 
-                    label="Ver" 
-                    icon="pi pi-eye"
-                    [outlined]="true"
-                    size="small"
-                    class="flex-1"
-                    (onClick)="viewProduct(product.id)"
-                  />
-                  <p-button 
-                    icon="pi pi-shopping-cart"
-                    severity="success"
-                    size="small"
-                    (onClick)="addToCart(product)"
-                    [loading]="addingToCart() === product.id"
-                  />
+                  <div class="flex flex-row-reverse md:flex-row gap-2">
+                    <p-button 
+                      icon="pi pi-eye" 
+                      styleClass="h-full"
+                      [outlined]="true"
+                      (onClick)="viewProduct(product.id)"
+                    />
+                    <p-button 
+                      icon="pi pi-shopping-cart"
+                      label="Añadir"
+                      styleClass="flex-auto md:flex-initial whitespace-nowrap"
+                      (onClick)="addToCart(product)"
+                      [loading]="addingToCart() === product.id"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -204,6 +305,10 @@ export class ProductsListComponent implements OnInit {
   searchQuery = '';
   selectedCategory: number | null = null;
   showFeatured = false;
+  
+  // Layout
+  layout: 'list' | 'grid' = 'grid';
+  layoutOptions = ['list', 'grid'];
 
   ngOnInit() {
     this.loadCategories();

@@ -2,9 +2,9 @@ import { Component, OnInit, signal, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SharedModule } from '../../../shared/shared.module';
 import { MessageService } from 'primeng/api';
-import { CatalogService } from './services/catalog.service';
-import { CartStore } from '../../../shared/services/cart.store';
-import type { Product } from './interfaces/product.interface';
+import { ApiService } from '../../../core/services/api.service';
+import { CartStore } from '../../../core/state/cart.store';
+import type { Product } from '../../../core/models';
 
 @Component({
   selector: 'app-product-detail',
@@ -53,7 +53,13 @@ import type { Product } from './interfaces/product.interface';
               </h1>
               
               <div class="text-3xl font-semibold text-primary mb-6">
-                {{ product()!.currency }} {{ product()!.base_price | number:'1.2-2' }}
+                @if (product()!.price_range) {
+                  @if (product()!.price_range!.min === product()!.price_range!.max) {
+                    Bs. {{ product()!.price_range!.min | number:'1.2-2' }}
+                  } @else {
+                    Bs. {{ product()!.price_range!.min | number:'1.2-2' }} - {{ product()!.price_range!.max | number:'1.2-2' }}
+                  }
+                }
               </div>
 
               <p class="text-surface-600 dark:text-surface-400 mb-6">
@@ -82,7 +88,7 @@ import type { Product } from './interfaces/product.interface';
 export class ProductDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
-  private catalogService = inject(CatalogService);
+  private apiService = inject(ApiService);
   private cartStore = inject(CartStore);
   private messageService = inject(MessageService);
 
@@ -113,12 +119,12 @@ export class ProductDetailComponent implements OnInit {
 
   loadProduct(id: number) {
     this.loading.set(true);
-    this.catalogService.getProduct(id).subscribe({
-      next: (product) => {
+    this.apiService.getProduct(id).subscribe({
+      next: (product: Product) => {
         this.product.set(product);
         this.loading.set(false);
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('Error loading product:', error);
         this.messageService.add({
           severity: 'error',
@@ -134,13 +140,21 @@ export class ProductDetailComponent implements OnInit {
   addToCart() {
     if (this.product()) {
       const mainImage = this.product()!.images?.find(img => img.is_primary)?.url || 
-                       this.product()!.images?.[0]?.url;
+                       this.product()!.images?.[0]?.url ||
+                       this.product()!.main_image;
                        
+      const price = this.product()!.price_range?.min || 0;
+      
+      // Usar el primer variant si existe, sino crear uno genérico
+      const variantId = this.product()!.variants?.[0]?.id || this.product()!.id;
+      
       this.cartStore.addItem({
-        product_id: this.product()!.id!,
+        variantId: variantId,
+        productId: this.product()!.id,
         name: this.product()!.name,
-        price: this.product()!.base_price,
-        image_url: mainImage
+        price: price,
+        qty: 1,
+        image: mainImage
       });
       
       this.messageService.add({

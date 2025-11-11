@@ -43,6 +43,11 @@ export const shoppingRoutes: Routes = [
         loadComponent: () =>
           import('./components/cart/checkout.component').then(m => m.CheckoutComponent)
       },
+      {
+        path: 'confirmation',
+        loadComponent: () =>
+          import('./components/cart/confirmation.component').then(m => m.ConfirmationComponent)
+      },
       
       // ========================================
       // MIS PEDIDOS (Requiere autenticación)
