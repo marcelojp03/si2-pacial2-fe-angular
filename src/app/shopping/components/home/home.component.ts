@@ -12,194 +12,204 @@ import type { ProductListItem, Category } from '../../../core/models';
   imports: [SharedModule],
   providers: [MessageService],
   template: `
-    <div class="px-6 lg:px-20 py-8">
+    <div class="min-h-screen bg-gray-50">
       <p-toast />
       
       <!-- Hero Section -->
-      <div class="text-center mb-12">
-        <h1 class="text-5xl font-bold mb-4 text-surface-900 dark:text-surface-0">
-          Bienvenido a Nuestra Tienda
-        </h1>
-        <p class="text-xl text-muted-color mb-6">
-          Descubre nuestros productos de calidad al mejor precio
-        </p>
+      <div class="relative bg-surface-0 dark:bg-surface-800 border-b border-surface-200 dark:border-surface-700">
+        <div class="relative px-6 lg:px-20 py-20 lg:py-28">
+          <div class="max-w-4xl mx-auto text-center">
+            <h1 class="text-5xl lg:text-7xl font-bold mb-6 text-surface-900 dark:text-surface-0">
+              Bienvenido a Nuestra Tienda
+            </h1>
+            <p class="text-xl lg:text-2xl mb-10 text-surface-600 dark:text-surface-300">
+              Descubre productos de calidad premium al mejor precio del mercado
+            </p>
+            
+            <div class="flex justify-center gap-4 flex-wrap">
+              <p-button 
+                label="Explorar Catálogo"
+                icon="pi pi-shopping-bag"
+                size="large"
+                severity="primary"
+                [raised]="true"
+                (onClick)="router.navigate(['/products'])"
+              />
+              <p-button 
+                label="Mi Carrito"
+                icon="pi pi-shopping-cart"
+                [badge]="cart.totalItems() > 0 ? cart.totalItems().toString() : ''"
+                severity="secondary"
+                [outlined]="true"
+                size="large"
+                (onClick)="router.navigate(['/cart'])"
+              />
+            </div>
+          </div>
+        </div>
         
-        <!-- Carrito -->
-        <div class="flex justify-center gap-4">
+        <!-- Decorative Wave -->
+        <div class="absolute bottom-0 left-0 right-0">
+          <svg viewBox="0 0 1200 120" preserveAspectRatio="none" class="w-full h-16 fill-surface-0 dark:fill-surface-900">
+            <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"></path>
+          </svg>
+        </div>
+      </div>
+
+      <div class="px-6 lg:px-20 py-12">
+        <!-- Categorías -->
+        @if (categories().length > 0) {
+          <div class="mb-16">
+            <div class="text-center mb-8">
+              <h2 class="text-3xl lg:text-4xl font-bold mb-3 text-surface-900 dark:text-surface-0">
+                Explora por Categoría
+              </h2>
+              <p class="text-muted-color text-lg">
+                Encuentra exactamente lo que buscas
+              </p>
+            </div>
+            <div class="flex gap-3 justify-center flex-wrap max-w-4xl mx-auto">
+              @for (category of categories(); track category.id) {
+                <p-button 
+                  [label]="category.name"
+                  icon="pi pi-tag"
+                  [outlined]="true"
+                  size="large"
+                  styleClass="hover:scale-105 transition-transform"
+                  (onClick)="filterByCategory(category.id)"
+                />
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Productos Destacados con Carousel Mejorado -->
+        @if (featuredProducts().length > 0) {
+          <div class="mb-16">
+            <div class="flex justify-between items-center mb-8">
+              <div>
+                <h2 class="text-3xl lg:text-4xl font-bold mb-2 text-surface-900 dark:text-surface-0">
+                  Productos Destacados
+                </h2>
+                <p class="text-muted-color text-lg">
+                  Lo mejor de nuestra colección
+                </p>
+              </div>
+              <p-button 
+                label="Ver todos"
+                icon="pi pi-arrow-right"
+                [text]="true"
+                iconPos="right"
+                size="large"
+                (onClick)="router.navigate(['/products'])"
+              />
+            </div>
+
+            <p-carousel 
+              [value]="featuredProducts()" 
+              [numVisible]="4" 
+              [numScroll]="1" 
+              [circular]="true"
+              [autoplayInterval]="5000"
+              [responsiveOptions]="carouselResponsiveOptions"
+              styleClass="custom-carousel"
+            >
+              <ng-template let-product pTemplate="item">
+                <div class="m-3">
+                  <div class="surface-card border border-surface-200 dark:border-surface-700 rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 h-full">
+                    <div class="relative">
+                      @if (product.main_image) {
+                        <img 
+                          [src]="product.main_image" 
+                          [alt]="product.name"
+                          class="w-full cursor-pointer transition-transform hover:scale-105"
+                          style="height: 280px; object-fit: cover;"
+                          (click)="viewProduct(product.id)"
+                        />
+                      } @else {
+                        <div class="w-full bg-surface-100 dark:bg-surface-800 flex items-center justify-center cursor-pointer"
+                             style="height: 280px;"
+                             (click)="viewProduct(product.id)">
+                          <i class="pi pi-image text-5xl text-muted-color"></i>
+                        </div>
+                      }
+                      <div class="absolute top-3 left-3">
+                        <p-tag value="Destacado" severity="success" icon="pi pi-star" styleClass="shadow-lg" />
+                      </div>
+                      <div class="absolute top-3 right-3">
+                        <p-button 
+                          icon="pi pi-heart"
+                          [rounded]="true"
+                          [text]="true"
+                          severity="contrast"
+                          size="small"
+                          styleClass="bg-white/90 backdrop-blur-sm hover:bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="p-5">
+                      <h3 class="text-xl font-semibold mb-3 cursor-pointer hover:text-primary transition-colors line-clamp-2 min-h-[3.5rem]"
+                          (click)="viewProduct(product.id)">
+                        {{ product.name }}
+                      </h3>
+                      
+                      @if (product.price_range) {
+                        <div class="text-3xl font-bold text-primary-600 dark:text-primary-400 mb-4">
+                          Bs. {{ product.price_range.price | number:'1.2-2' }}
+                        </div>
+                      }
+                      
+                      <div class="flex gap-2">
+                        <p-button 
+                          icon="pi pi-eye" 
+                          severity="secondary"
+                          [outlined]="true"
+                          label="Ver"
+                          styleClass="flex-1"
+                          (onClick)="viewProduct(product.id)"
+                        />
+                        <p-button 
+                          icon="pi pi-shopping-cart"
+                          label="Agregar"
+                          styleClass="flex-1"
+                          (onClick)="addToCart(product)"
+                          [loading]="addingToCart() === product.id"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </p-carousel>
+          </div>
+        }
+
+        <!-- Call to Action -->
+        <div class="mt-16 bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 rounded-3xl p-12 text-center">
+          <h3 class="text-3xl lg:text-4xl font-bold mb-4 text-surface-900 dark:text-surface-0">
+            ¿No encuentras lo que buscas?
+          </h3>
+          <p class="text-xl text-muted-color mb-8">
+            Explora nuestro catálogo completo con cientos de productos
+          </p>
           <p-button 
             label="Ver Catálogo Completo"
-            icon="pi pi-shopping-bag"
+            icon="pi pi-arrow-right"
+            iconPos="right"
             size="large"
+            [raised]="true"
             (onClick)="router.navigate(['/products'])"
-          />
-          <p-button 
-            icon="pi pi-shopping-cart"
-            [badge]="cart.totalItems().toString()"
-            [outlined]="true"
-            severity="success"
-            size="large"
-            (onClick)="router.navigate(['/cart'])"
           />
         </div>
       </div>
 
-      <!-- Categorías -->
-      @if (categories().length > 0) {
-        <div class="mb-12">
-          <h2 class="text-3xl font-semibold mb-6 text-center">Categorías</h2>
-          <div class="flex gap-3 justify-center flex-wrap">
-            @for (category of categories(); track category.id) {
-              <p-button 
-                [label]="category.name"
-                [outlined]="true"
-                (onClick)="filterByCategory(category.id)"
-              />
-            }
-          </div>
-        </div>
-      }
-
-      <!-- Carousel de Productos Destacados -->
-      @if (featuredProducts().length > 0) {
-        <div class="mb-12">
-          <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-semibold">Productos Destacados</h2>
-            <p-button 
-              label="Ver todos"
-              icon="pi pi-arrow-right"
-              [text]="true"
-              iconPos="right"
-              (onClick)="router.navigate(['/products'])"
-            />
-          </div>
-
-          <p-carousel 
-            [value]="featuredProducts()" 
-            [numVisible]="4" 
-            [numScroll]="1" 
-            [circular]="true"
-            [autoplayInterval]="5000"
-            [responsiveOptions]="carouselResponsiveOptions"
-          >
-            <ng-template let-product pTemplate="item">
-              <div class="border border-surface rounded-border m-2 p-4 hover:shadow-lg transition-shadow">
-                <div class="mb-4">
-                  <div class="relative mx-auto">
-                    @if (product.main_image) {
-                      <img 
-                        [src]="product.main_image" 
-                        [alt]="product.name"
-                        class="w-full rounded-border cursor-pointer"
-                        style="max-height: 200px; object-fit: cover;"
-                        (click)="viewProduct(product.id)"
-                      />
-                    } @else {
-                      <div class="w-full h-48 bg-surface-100 dark:bg-surface-800 rounded-border flex items-center justify-center cursor-pointer"
-                           (click)="viewProduct(product.id)">
-                        <i class="pi pi-image text-4xl text-muted-color"></i>
-                      </div>
-                    }
-                    <div class="absolute bg-black/70 rounded-border" style="left: 5px; top: 5px;">
-                      <p-tag value="Destacado" severity="success" icon="pi pi-star" />
-                    </div>
-                  </div>
-                </div>
-
-                <div class="mb-4 font-medium cursor-pointer hover:text-primary"
-                     (click)="viewProduct(product.id)">
-                  {{ product.name }}
-                </div>
-                
-                <div class="flex justify-between items-center">
-                  @if (product.price_range) {
-                    <div class="mt-0 font-semibold text-xl">
-                      @if (product.price_range.min === product.price_range.max) {
-                        Bs. {{ product.price_range.min | number:'1.2-2' }}
-                      } @else {
-                        Bs. {{ product.price_range.min | number:'1.2-2' }}
-                      }
-                    </div>
-                  }
-                  <span>
-                    <p-button 
-                      icon="pi pi-eye" 
-                      severity="secondary"
-                      [outlined]="true"
-                      (onClick)="viewProduct(product.id)"
-                    />
-                    <p-button 
-                      icon="pi pi-shopping-cart"
-                      styleClass="ml-2"
-                      (onClick)="addToCart(product)"
-                      [loading]="addingToCart() === product.id"
-                    />
-                  </span>
-                </div>
-              </div>
-            </ng-template>
-          </p-carousel>
-        </div>
-      }
-
-      <!-- Últimos Productos -->
-      @if (recentProducts().length > 0) {
-        <div>
-          <h2 class="text-3xl font-semibold mb-6">Últimos Productos</h2>
-          <div class="grid">
-            @for (product of recentProducts(); track product.id) {
-              <div class="col-12 sm:col-6 lg:col-4 xl:col-3 p-2">
-                <div class="border-surface-200 dark:border-surface-700 surface-card rounded-xl border p-4 hover:shadow-lg transition-all">
-                  <div class="relative mb-3">
-                    @if (product.main_image) {
-                      <img 
-                        [src]="product.main_image" 
-                        [alt]="product.name"
-                        class="w-full h-48 object-cover rounded-xl cursor-pointer"
-                        (click)="viewProduct(product.id)"
-                      />
-                    } @else {
-                      <div class="w-full h-48 bg-surface-100 dark:bg-surface-800 rounded-xl flex items-center justify-center cursor-pointer"
-                           (click)="viewProduct(product.id)">
-                        <i class="pi pi-image text-4xl text-muted-color"></i>
-                      </div>
-                    }
-                  </div>
-                  <div class="mb-3">
-                    <h4 class="text-lg font-semibold mb-2 truncate cursor-pointer hover:text-primary"
-                        (click)="viewProduct(product.id)">
-                      {{ product.name }}
-                    </h4>
-                    @if (product.price_range) {
-                      <div class="text-xl font-bold text-primary">
-                        Bs. {{ product.price_range.min | number:'1.2-2' }}
-                      </div>
-                    }
-                  </div>
-                  <div class="flex gap-2">
-                    <p-button 
-                      label="Ver" 
-                      [outlined]="true"
-                      size="small"
-                      class="flex-1"
-                      (onClick)="viewProduct(product.id)"
-                    />
-                    <p-button 
-                      icon="pi pi-shopping-cart"
-                      severity="success"
-                      size="small"
-                      (onClick)="addToCart(product)"
-                    />
-                  </div>
-                </div>
-              </div>
-            }
-          </div>
-        </div>
-      }
-
       @if (loading()) {
-        <div class="text-center py-12">
-          <p-progressSpinner />
+        <div class="text-center py-20">
+          <p-progressSpinner 
+            strokeWidth="3"
+            animationDuration="1s"
+          />
         </div>
       }
     </div>
@@ -211,6 +221,41 @@ import type { ProductListItem, Category } from '../../../core/models';
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
+
+    @keyframes fade-in {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fade-in {
+      animation: fade-in 0.8s ease-out;
+    }
+
+    :host ::ng-deep .custom-carousel {
+      .p-carousel-content {
+        padding: 0.5rem 0;
+      }
+      
+      .p-carousel-prev,
+      .p-carousel-next {
+        width: 3rem;
+        height: 3rem;
+        border-radius: 50%;
+        background: white;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        
+        &:hover {
+          background: var(--primary-color);
+          color: white;
+        }
+      }
+    }
   `]
 })
 export class ShoppingHomeComponent implements OnInit {
@@ -220,7 +265,6 @@ export class ShoppingHomeComponent implements OnInit {
   private messageService = inject(MessageService);
 
   featuredProducts = signal<ProductListItem[]>([]);
-  recentProducts = signal<ProductListItem[]>([]);
   categories = signal<Category[]>([]);
   loading = signal(false);
   addingToCart = signal<number | null>(null);
@@ -228,7 +272,6 @@ export class ShoppingHomeComponent implements OnInit {
   ngOnInit() {
     this.loadCategories();
     this.loadFeaturedProducts();
-    this.loadRecentProducts();
     this.cart.loadFromLocalStorage();
   }
 
@@ -241,7 +284,7 @@ export class ShoppingHomeComponent implements OnInit {
 
   loadFeaturedProducts() {
     this.loading.set(true);
-    this.api.listProducts({ featured: true, page_size: 8 }).subscribe({
+    this.api.listProducts({ featured: true, page_size: 12 }).subscribe({
       next: (res: any) => {
         this.featuredProducts.set(res.results || []);
         this.loading.set(false);
@@ -250,13 +293,6 @@ export class ShoppingHomeComponent implements OnInit {
         console.error('Error loading featured products:', err);
         this.loading.set(false);
       }
-    });
-  }
-
-  loadRecentProducts() {
-    this.api.listProducts({ page_size: 8 }).subscribe({
-      next: (res: any) => this.recentProducts.set(res.results || []),
-      error: (err: any) => console.error('Error loading recent products:', err)
     });
   }
 
@@ -274,10 +310,10 @@ export class ShoppingHomeComponent implements OnInit {
       variantId: product.id,
       productId: product.id,
       name: product.name,
-      price: product.price_range?.min || 0,
+      price: product.price_range?.price || 0,
       qty: 1,
       image: product.main_image,
-      code: product.slug
+      code: product.sku
     });
     this.messageService.add({
       severity: 'success',

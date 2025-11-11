@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 
@@ -42,12 +42,25 @@ export class LoginComponent implements OnInit {
     // private bitacoraService:BitacoraService,
     public formBuilder: FormBuilder,
     private router: Router,
+    private route: ActivatedRoute,
     private messageService: MessageService
   ) {
     this.initFormBuilder();
   }
 
   ngOnInit() {
+    // Mostrar mensaje si viene de una redirección (ej: checkout guard)
+    this.route.queryParams.subscribe(params => {
+      if (params['message']) {
+        this.messageService.add({
+          key: 'br',
+          severity: 'info',
+          summary: 'Autenticación requerida',
+          detail: params['message'],
+          life: 5000
+        });
+      }
+    });
   }
 
   ngOnDestroy() {
@@ -95,20 +108,26 @@ export class LoginComponent implements OnInit {
         this.form.enable();
       }))
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           console.info("LOGIN RESPONSE: ", response);
+
+          // Determinar redirección basada en user_type y returnUrl
+          const isAdmin = response.user_type === 'admin';
+          const returnUrl = this.route.snapshot.queryParams['returnUrl'];
+          const redirectUrl = isAdmin ? '/admin' : (returnUrl || '/');
+          const welcomeMessage = isAdmin ? 'Bienvenido al panel de administración' : 'Bienvenido a la tienda';
 
           // Success message
           this.messageService.add({
             key: 'br',
             severity: 'success',
             summary: 'Sesión iniciada correctamente',
-            detail: 'Redirigiendo al panel de administración...',
+            detail: welcomeMessage,
             life: 3500
           });
 
           // Redirect after a brief delay to show the toast
-          setTimeout(() => this.router.navigateByUrl('/admin'), 1500);
+          setTimeout(() => this.router.navigateByUrl(redirectUrl), 1500);
         },
         error: (error: any) => {
           this.messageService.add({

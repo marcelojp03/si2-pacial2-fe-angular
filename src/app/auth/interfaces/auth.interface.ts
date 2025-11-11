@@ -30,15 +30,26 @@ export interface UserRole {
 }
 
 export interface LoginSuccessResponse {
-    data: {
-        org_id: number;
-        token: string;  // Mantener para compatibilidad
-        access_token: string;  // Nuevo en Sprint 3
-        refresh_token: string; // Nuevo en Sprint 3
-        user: UserData;
+    user_type: 'customer' | 'admin';  // Indica el tipo de usuario
+    user: {
+        id: number;
+        email: string;
+        first_name: string;
+        last_name: string;
+        is_staff: boolean;
+        is_superuser: boolean;
+        username?: string;  // Solo para admin
+    };
+    tokens?: {  // Solo para clientes
+        access: string;
+        refresh: string;
+    };
+    customer?: {  // Solo para clientes
+        id: number;
+        phone?: string;
+        city?: string;
     };
     message: string;
-    success: boolean;
 }
 
 export interface LoginErrorResponse {

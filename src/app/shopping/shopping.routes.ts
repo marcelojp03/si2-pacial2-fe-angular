@@ -1,6 +1,7 @@
 // shopping.routes.ts
 import { Routes } from '@angular/router';
 import { ShoppingComponent } from './shopping.component';
+import { checkoutGuard } from '../core/guards/checkout.guard';
 
 export const shoppingRoutes: Routes = [
   {
@@ -31,20 +32,23 @@ export const shoppingRoutes: Routes = [
       },
       
       // ========================================
-      // CARRITO & CHECKOUT
+      // CARRITO & CHECKOUT (Requiere autenticación)
       // ========================================
       {
         path: 'cart',
+        canActivate: [checkoutGuard],
         loadComponent: () =>
           import('./components/cart/cart-page.component').then(m => m.CartPageComponent)
       },
       {
         path: 'checkout',
+        canActivate: [checkoutGuard],
         loadComponent: () =>
           import('./components/cart/checkout.component').then(m => m.CheckoutComponent)
       },
       {
         path: 'confirmation',
+        canActivate: [checkoutGuard],
         loadComponent: () =>
           import('./components/cart/confirmation.component').then(m => m.ConfirmationComponent)
       },
@@ -54,11 +58,13 @@ export const shoppingRoutes: Routes = [
       // ========================================
       {
         path: 'my-orders',
+        canActivate: [checkoutGuard],
         loadComponent: () =>
           import('./components/orders/my-orders.component').then(m => m.MyOrdersComponent)
       },
       {
         path: 'my-orders/:id',
+        canActivate: [checkoutGuard],
         loadComponent: () =>
           import('./components/orders/order-detail.component').then(m => m.OrderDetailComponent)
       },

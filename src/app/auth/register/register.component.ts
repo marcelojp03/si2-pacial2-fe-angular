@@ -58,11 +58,12 @@ export class RegisterComponent implements OnInit {
 
     this.loading = true;
 
-    // Register with JWT auth
+    // Register with JWT auth - Clientes API
     const registerRequest: RegisterRequest = {
       username: this.form.value.email,
       email: this.form.value.email,
       password: this.form.value.password,
+      password2: this.form.value.passwordConfirmation, // Requerido por el backend
       first_name: this.form.value.fullName?.split(' ')[0] || '',
       last_name: this.form.value.fullName?.split(' ').slice(1).join(' ') || ''
     };

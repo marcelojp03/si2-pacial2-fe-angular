@@ -55,35 +55,38 @@ export interface ProductVariant {
 export interface Product {
   id: number;
   name: string;
-  slug: string;
+  sku: string;
+  slug?: string;
   description?: string;
+  brand?: string;
+  base_price: string;  // Backend devuelve base_price como string en el detalle
+  categories?: Category[];
   category?: Category;
   status: 'ACTIVE' | 'INACTIVE' | 'DRAFT';
-  is_featured: boolean;
+  is_featured?: boolean;
   category_names?: string[];
   main_image?: string;
-  price_range?: {
-    min: number;
-    max: number;
-  };
   variants?: ProductVariant[];
   images?: ProductImage[];
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface ProductListItem {
   id: number;
   name: string;
-  slug: string;
+  slug?: string;
+  sku?: string;
   description?: string;
   status: string;
-  is_featured: boolean;
+  is_featured?: boolean;
+  brand?: string;
   category_names: string[];
   main_image?: string;
   price_range: {
-    min: number;
-    max: number;
+    price: number;  // Backend devuelve solo "price", no min/max
   };
+  created_at?: string;
 }
 
 // PaginatedResponse está en api.model.ts para evitar duplicados

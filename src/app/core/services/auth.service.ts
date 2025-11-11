@@ -43,14 +43,28 @@ export class AuthService {
     }
   }
 
-  login(username: string, password: string): Observable<LoginResponse> {
+  login(username: string, password: string): Observable<any> {
     const credentials: LoginRequest = { username, password };
     
-    return this.http.post<LoginResponse>(`${this.apiUrl}/auth/token/`, credentials)
+    // Endpoint para clientes con JWT
+    return this.http.post<any>(`${this.apiUrl}/customers/login/`, credentials)
       .pipe(
         tap(response => {
-          this.saveTokens(response.access, response.refresh);
-          this.loadCurrentUser().subscribe();
+          console.log('[AuthService] Login response:', response);
+          
+          // Si es cliente, guardar tokens JWT
+          if (response.user_type === 'customer' && response.tokens) {
+            this.saveTokens(response.tokens.access, response.tokens.refresh);
+          }
+          
+          // Guardar información del usuario
+          if (response.user) {
+            this.saveUser(response.user);
+            this.currentUserSubject.next(response.user);
+          }
+          
+          // Guardar user_type para saber dónde redirigir
+          localStorage.setItem('user_type', response.user_type);
         }),
         catchError(error => {
           console.error('[AuthService] Error en login:', error);
@@ -60,7 +74,8 @@ export class AuthService {
   }
 
   register(request: RegisterRequest): Observable<User> {
-    return this.http.post<User>(`${this.apiUrl}/auth/register/`, request)
+    // Endpoint para registro de clientes
+    return this.http.post<User>(`${this.apiUrl}/customers/register/`, request)
       .pipe(
         catchError(error => {
           console.error('[AuthService] Error en registro:', error);
@@ -78,7 +93,8 @@ export class AuthService {
 
     const request: RefreshTokenRequest = { refresh: refreshToken };
     
-    return this.http.post<RefreshTokenResponse>(`${this.apiUrl}/auth/token/refresh/`, request)
+    // Endpoint para refresh de clientes
+    return this.http.post<RefreshTokenResponse>(`${this.apiUrl}/customers/token/refresh/`, request)
       .pipe(
         tap(response => {
           this.saveTokens(response.access, response.refresh);
@@ -102,7 +118,8 @@ export class AuthService {
   }
 
   loadCurrentUser(): Observable<User> {
-    return this.http.get<User>(`${this.apiUrl}/auth/me/`)
+    // Endpoint para perfil de clientes (requiere JWT Bearer Token)
+    return this.http.get<User>(`${this.apiUrl}/customers/profile/`)
       .pipe(
         tap(user => {
           this.saveUser(user);
@@ -116,9 +133,14 @@ export class AuthService {
   }
 
   logout(): void {
-    this.http.post(`${this.apiUrl}/auth/logout/`, {})
-      .pipe(catchError(() => of(null)))
-      .subscribe();
+    const refreshToken = this.getRefreshToken();
+    
+    // Endpoint para logout de clientes (blacklist del refresh token)
+    if (refreshToken) {
+      this.http.post(`${this.apiUrl}/customers/logout/`, { refresh: refreshToken })
+        .pipe(catchError(() => of(null)))
+        .subscribe();
+    }
 
     this.clearStorage();
     this.currentUserSubject.next(null);
@@ -150,6 +172,7 @@ export class AuthService {
     localStorage.removeItem(this.ACCESS_TOKEN_KEY);
     localStorage.removeItem(this.REFRESH_TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
+    localStorage.removeItem('user_type');  // Limpiar también el tipo de usuario
   }
 
   getAccessToken(): string | null {
@@ -162,6 +185,18 @@ export class AuthService {
 
   getCurrentUser(): User | null {
     return this.currentUserSubject.value;
+  }
+
+  getUserType(): 'customer' | 'admin' | null {
+    return localStorage.getItem('user_type') as 'customer' | 'admin' | null;
+  }
+
+  isAdmin(): boolean {
+    return this.getUserType() === 'admin';
+  }
+
+  isCustomer(): boolean {
+    return this.getUserType() === 'customer';
   }
 
   isAuthenticated(): boolean {

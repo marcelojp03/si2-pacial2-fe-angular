@@ -20,7 +20,7 @@ import { FooterWidget } from './components/footer.widget';
   template: `
     <div class="bg-surface-0 dark:bg-surface-900">
       <div id="home" class="shopping-wrapper overflow-hidden">
-        <app-topbar-widget class="py-6 px-6 mx-0 md:mx-12 lg:mx-20 lg:px-20 flex items-center justify-between relative lg:static" />
+        <app-topbar-widget />
         <router-outlet></router-outlet>
         <app-footer-widget />
       </div>

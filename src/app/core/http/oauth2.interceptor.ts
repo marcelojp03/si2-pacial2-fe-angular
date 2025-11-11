@@ -23,7 +23,9 @@ export const oauth2Interceptor: HttpInterceptorFn = (req, next) => {
     '/auth/register/',
     '/api/healthz/',
     '/api/docs/',
-    '/api/schema/'
+    '/api/schema/',
+    '/catalog/products/',
+    '/catalog/categories/'
   ];
 
   const isPublicRoute = publicRoutes.some(route => req.url.includes(route));
@@ -184,7 +186,9 @@ export class Oauth2Interceptor implements HttpInterceptor {
       '/auth/register/',
       '/api/healthz/',
       '/api/docs/',
-      '/api/schema/'
+      '/api/schema/',
+      '/catalog/products/',
+      '/catalog/categories/'
     ];
     
     // No agregar token a las rutas públicas
