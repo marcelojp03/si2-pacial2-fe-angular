@@ -12,9 +12,15 @@ export const checkoutGuard: CanActivateFn = (route, state) => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
+  console.log('[Checkout Guard] Verificando acceso a:', state.url);
+  console.log('[Checkout Guard] Token:', auth.getAccessToken() ? 'Presente' : 'Ausente');
+  console.log('[Checkout Guard] User Type:', auth.getUserType());
+  console.log('[Checkout Guard] Current User:', auth.getCurrentUser());
+  console.log('[Checkout Guard] isAuthenticated():', auth.isAuthenticated());
+
   // Verificar que el usuario esté autenticado
   if (!auth.isAuthenticated()) {
-    console.warn('[Checkout Guard] Se requiere autenticación para proceder con la compra');
+    console.warn('[Checkout Guard] BLOQUEADO - Se requiere autenticación para proceder con la compra');
     
     // Redirigir al login guardando la URL de retorno
     return router.createUrlTree(['/auth/login'], { 
@@ -27,10 +33,10 @@ export const checkoutGuard: CanActivateFn = (route, state) => {
 
   // Verificar que sea un cliente (no admin)
   if (auth.isAdmin()) {
-    console.warn('[Checkout Guard] Los administradores no pueden realizar compras');
+    console.warn('[Checkout Guard] BLOQUEADO - Los administradores no pueden realizar compras');
     return router.createUrlTree(['/admin']);
   }
 
-  console.log('[Checkout Guard] Acceso permitido al checkout');
+  console.log('[Checkout Guard] ✅ Acceso permitido al checkout');
   return true;
 };

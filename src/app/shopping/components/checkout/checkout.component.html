@@ -1,0 +1,275 @@
+<div class="min-h-screen bg-surface-0 dark:bg-surface-900">
+  <p-toast />
+  
+  <!-- Header Compacto -->
+  <div class="bg-gradient-to-r from-primary-600 to-primary-700 dark:from-primary-800 dark:to-primary-900">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 class="text-3xl md:text-4xl font-bold text-white mb-1">Finalizar Compra</h1>
+          <p class="text-primary-100">Completa tu pedido</p>
+        </div>
+        <p-button 
+          icon="pi pi-arrow-left"
+          label="Volver al Carrito"
+          severity="contrast"
+          [outlined]="true"
+          size="large"
+          (onClick)="router.navigate(['/cart'])"
+        />
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Formulario Principal -->
+      <div class="lg:col-span-2 space-y-5">
+        <!-- Dirección de Envío -->
+        <div class="surface-card border border-surface-200 dark:border-surface-700 rounded-xl overflow-hidden">
+          <div class="p-4 bg-surface-50 dark:bg-surface-800 border-b border-surface-200 dark:border-surface-700">
+            <h2 class="text-lg font-semibold flex items-center gap-2">
+              <i class="pi pi-map-marker text-primary"></i>
+              Dirección de Envío
+            </h2>
+          </div>
+          <div class="p-5">
+            @if (loading()) {
+              <div class="text-center py-8">
+                <p-progressSpinner styleClass="w-12 h-12" />
+              </div>
+            } @else {
+              <!-- Direcciones Guardadas -->
+              @if (addresses().length > 0) {
+                <div class="space-y-3 mb-4">
+                @for (address of addresses(); track address.id) {
+                  <div 
+                    class="p-4 border rounded-lg cursor-pointer transition-all"
+                    [class.border-primary]="selectedAddressId() === address.id"
+                    [class.bg-primary-50]="selectedAddressId() === address.id"
+                    [class.border-surface-200]="selectedAddressId() !== address.id"
+                    (click)="selectAddress(address.id)"
+                  >
+                    <div class="flex items-start gap-3">
+                      <p-radioButton 
+                        [value]="address.id" 
+                        [(ngModel)]="selectedAddressIdModel"
+                        (onClick)="selectAddress(address.id)"
+                      />
+                      <div class="flex-1">
+                        <div class="font-semibold mb-1">
+                          {{ address.street }}
+                          @if (address.is_default) {
+                            <p-tag value="Predeterminada" severity="success" styleClass="ml-2" />
+                          }
+                        </div>
+                        <div class="text-sm text-surface-600 dark:text-surface-400">
+                          {{ address.city }}, {{ address.state }} {{ address.postal_code }}
+                        </div>
+                        <div class="text-sm text-surface-600 dark:text-surface-400">
+                          {{ address.country }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Nueva Dirección -->
+            <p-button 
+              label="Agregar nueva dirección"
+              icon="pi pi-plus"
+              [text]="true"
+              (onClick)="toggleNewAddressForm()"
+              styleClass="mb-4"
+            />
+
+            @if (showNewAddressForm) {
+              <form [formGroup]="checkoutForm" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium mb-2">Calle *</label>
+                    <input pInputText formControlName="street" class="w-full" placeholder="Av. Principal 123" />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium mb-2">Ciudad *</label>
+                    <input pInputText formControlName="city" class="w-full" placeholder="Santa Cruz" />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium mb-2">Departamento *</label>
+                    <input pInputText formControlName="state" class="w-full" placeholder="Santa Cruz" />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium mb-2">Código Postal</label>
+                    <input pInputText formControlName="postal_code" class="w-full" placeholder="0000" />
+                  </div>
+                  <div class="md:col-span-2">
+                    <label class="block text-sm font-medium mb-2">País *</label>
+                    <input pInputText formControlName="country" class="w-full" placeholder="Bolivia" />
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <p-checkbox formControlName="save_address" [binary]="true" inputId="save" />
+                  <label for="save" class="cursor-pointer">Guardar esta dirección</label>
+                </div>
+              </form>
+            }
+          }
+          </div>
+        </div>
+
+        <!-- Método de Pago -->
+        <div class="surface-card border border-surface-200 dark:border-surface-700 rounded-xl overflow-hidden">
+          <div class="p-4 bg-surface-50 dark:bg-surface-800 border-b border-surface-200 dark:border-surface-700">
+            <h2 class="text-lg font-semibold flex items-center gap-2">
+              <i class="pi pi-credit-card text-primary"></i>
+              Método de Pago
+            </h2>
+          </div>
+          <div class="p-5">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+            @for (method of paymentMethods; track method.value) {
+              <div 
+                class="p-4 border rounded-lg cursor-pointer transition-all"
+                [class.border-primary]="selectedPaymentMethod() === method.value"
+                [class.bg-primary-50]="selectedPaymentMethod() === method.value"
+                [class.border-surface-200]="selectedPaymentMethod() !== method.value"
+                (click)="selectPaymentMethod(method.value)"
+              >
+                <div class="flex items-center gap-3">
+                  <p-radioButton 
+                    [value]="method.value" 
+                    [(ngModel)]="selectedPaymentMethodModel"
+                  />
+                  <i [class]="method.icon + ' text-2xl'"></i>
+                  <span class="font-medium">{{ method.label }}</span>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Proveedor de Pago (solo para tarjetas) -->
+          @if (selectedPaymentMethod() === 'CREDIT_CARD' || selectedPaymentMethod() === 'DEBIT_CARD') {
+            <div class="mt-4 pt-4 border-t border-surface-200 dark:border-surface-700">
+              <label class="block text-sm font-medium mb-3">Procesar pago con:</label>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                @for (provider of paymentProviders; track provider.value) {
+                  <div 
+                    class="p-3 border rounded-lg cursor-pointer transition-all text-center"
+                    [class.border-primary]="selectedPaymentProvider() === provider.value"
+                    [class.bg-primary-50]="selectedPaymentProvider() === provider.value"
+                    [class.border-surface-200]="selectedPaymentProvider() !== provider.value"
+                    (click)="selectPaymentProvider(provider.value)"
+                  >
+                    <i [class]="provider.icon + ' text-2xl mb-2 block'"></i>
+                    <span class="text-sm font-medium">{{ provider.label }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+          </div>
+        </div>
+
+        <!-- Notas Adicionales -->
+        <div class="surface-card border border-surface-200 dark:border-surface-700 rounded-xl overflow-hidden">
+          <div class="p-4 bg-surface-50 dark:bg-surface-800 border-b border-surface-200 dark:border-surface-700">
+            <h2 class="text-lg font-semibold flex items-center gap-2">
+              <i class="pi pi-comment text-primary"></i>
+              Notas (Opcional)
+            </h2>
+          </div>
+
+          <div class="p-5">
+            <form [formGroup]="checkoutForm">
+              <textarea 
+                pInputTextarea 
+                formControlName="notes" 
+                rows="3" 
+                class="w-full"
+                placeholder="Ej: Tocar el timbre, entregar en portería..."
+              ></textarea>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resumen del Pedido -->
+      <!-- Resumen -->
+      <div class="lg:col-span-1">
+        <div class="surface-card border border-surface-200 dark:border-surface-700 rounded-xl overflow-hidden sticky top-4">
+          <div class="p-4 bg-surface-50 dark:bg-surface-800 border-b border-surface-200 dark:border-surface-700">
+            <h2 class="text-lg font-semibold">Resumen del Pedido</h2>
+          </div>
+
+          <div class="p-5">
+            <!-- Productos -->
+            <div class="space-y-3 mb-4">
+              @for (item of cartItems(); track item.variantId) {
+                <div class="flex gap-3">
+                  <img 
+                    [src]="item.image || 'assets/placeholder.png'" 
+                    [alt]="item.name"
+                    class="w-14 h-14 object-cover rounded"
+                  />
+                  <div class="flex-1">
+                    <div class="font-medium text-sm line-clamp-2">{{ item.name }}</div>
+                    <div class="text-xs text-surface-600">Cant: {{ item.qty }}</div>
+                    <div class="text-sm font-semibold text-primary">
+                      Bs. {{ (item.price * item.qty) | number:'1.2-2' }}
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <div class="border-t border-surface-200 dark:border-surface-700 pt-4 space-y-2 mb-5">
+              <div class="flex justify-between text-sm">
+                <span>Subtotal</span>
+                <span>Bs. {{ subtotal() | number:'1.2-2' }}</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span>IVA (13%)</span>
+                <span>Bs. {{ tax() | number:'1.2-2' }}</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span>Envío</span>
+                <span>
+                  @if (shippingCost() === 0) {
+                    <span class="text-green-600 font-semibold">GRATIS</span>
+                  } @else {
+                    <span>Bs. {{ shippingCost() | number:'1.2-2' }}</span>
+                  }
+                </span>
+              </div>
+              <div class="flex justify-between text-lg font-bold pt-2 border-t border-surface-200 dark:border-surface-700">
+                <span>Total</span>
+                <span class="text-primary">Bs. {{ total() | number:'1.2-2' }}</span>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <p-button 
+                label="Confirmar Pedido"
+                icon="pi pi-check"
+                styleClass="w-full"
+                [loading]="processing()"
+                (onClick)="processCheckout()"
+              />
+              <p-button 
+                label="Volver al Carrito"
+                icon="pi pi-arrow-left"
+                severity="secondary"
+                [outlined]="true"
+                styleClass="w-full"
+                (onClick)="goBack()"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

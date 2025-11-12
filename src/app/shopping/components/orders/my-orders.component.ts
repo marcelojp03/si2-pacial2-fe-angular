@@ -1,38 +1,94 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { SharedModule } from '../../../shared/shared.module';
-import { RouterLink } from '@angular/router';
+import { OrdersService } from '../../../core/services/orders.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { MessageService } from 'primeng/api';
-import { OrdersService } from './services/orders.service';
-import type { Order } from './interfaces/order.interface';
+import { Order, OrderStatus, PaymentStatus, ORDER_STATUS_MAP, PAYMENT_STATUS_MAP } from '../../../core/models/orders.model';
 
 @Component({
   selector: 'app-my-orders',
   standalone: true,
-  imports: [
-    SharedModule,
-    RouterLink],
+  imports: [SharedModule],
   providers: [MessageService],
   templateUrl: './my-orders.component.html'
 })
 export class MyOrdersComponent implements OnInit {
+  router = inject(Router);
   private ordersService = inject(OrdersService);
+  private authService = inject(AuthService);
   private messageService = inject(MessageService);
-  
+
   orders = signal<Order[]>([]);
   loading = signal(false);
+  totalOrders = signal(0);
+  currentPage = 1;
+  pageSize = 10;
+  
+  selectedStatus: OrderStatus | null = null;
+  selectedPaymentStatus: PaymentStatus | null = null;
+  searchQuery = '';
+  
+  cancellingOrderId = signal<number | null>(null);
+  showCancelDialog = false;
+  orderToCancel: Order | null = null;
+
+  // Mapeos importados
+  ORDER_STATUS_MAP = ORDER_STATUS_MAP;
+  PAYMENT_STATUS_MAP = PAYMENT_STATUS_MAP;
+
+  statusOptions = [
+    { label: 'Creado', value: 'CREATED' },
+    { label: 'Confirmado', value: 'CONFIRMED' },
+    { label: 'En Proceso', value: 'PROCESSING' },
+    { label: 'Enviado', value: 'SHIPPED' },
+    { label: 'Entregado', value: 'DELIVERED' },
+    { label: 'Cancelado', value: 'CANCELLED' }
+  ];
+
+  paymentStatusOptions = [
+    { label: 'Pendiente', value: 'PENDING' },
+    { label: 'Pagado', value: 'PAID' },
+    { label: 'Fallido', value: 'FAILED' },
+    { label: 'Reembolsado', value: 'REFUNDED' }
+  ];
 
   ngOnInit() {
-    this.loadMyOrders();
+    this.loadOrders();
   }
 
-  loadMyOrders() {
+  loadOrders() {
+    const user = this.authService.getCurrentUser();
+    if (!user) {
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    const customerId = parseInt(localStorage.getItem('customer_id') || '0');
+    if (!customerId) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'No se pudo obtener la información del cliente'
+      });
+      return;
+    }
+
     this.loading.set(true);
-    this.ordersService.listOrders().subscribe({
-      next: (response: any) => {
-        this.orders.set(response.results);
+
+    const filters = {
+      status: this.selectedStatus || undefined,
+      payment_status: this.selectedPaymentStatus || undefined,
+      search: this.searchQuery || undefined
+    };
+
+    this.ordersService.getOrders(customerId, filters).subscribe({
+      next: (response) => {
+        this.orders.set(response.results || []);
+        this.totalOrders.set(response.count || 0);
         this.loading.set(false);
       },
-      error: (error: any) => {
+      error: (error) => {
         console.error('Error loading orders:', error);
         this.messageService.add({
           severity: 'error',
@@ -44,27 +100,89 @@ export class MyOrdersComponent implements OnInit {
     });
   }
 
-  getStatusLabel(status: string): string {
-    const labels: Record<string, string> = {
-      'PENDING': 'Pendiente',
-      'CONFIRMED': 'Confirmado',
-      'PROCESSING': 'Procesando',
-      'SHIPPED': 'Enviado',
-      'DELIVERED': 'Entregado',
-      'CANCELLED': 'Cancelado'
-    };
-    return labels[status] || status;
+  onFilterChange() {
+    this.currentPage = 1;
+    this.loadOrders();
   }
 
-  getStatusSeverity(status: string): 'success' | 'secondary' | 'info' | 'warning' | 'danger' | 'contrast' {
-    const severities: Record<string, 'success' | 'secondary' | 'info' | 'warning' | 'danger' | 'contrast'> = {
-      'PENDING': 'warning',
-      'CONFIRMED': 'info',
-      'PROCESSING': 'info',
-      'SHIPPED': 'info',
-      'DELIVERED': 'success',
-      'CANCELLED': 'danger'
-    };
-    return severities[status] || 'secondary';
+  onSearchChange() {
+    this.currentPage = 1;
+    this.loadOrders();
+  }
+
+  onPageChange(event: any) {
+    this.currentPage = event.page + 1;
+    this.loadOrders();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  viewOrder(orderId: number) {
+    this.router.navigate(['/my-orders', orderId]);
+  }
+
+  canCancelOrder(order: Order): boolean {
+    return order.status === 'CREATED' || order.status === 'CONFIRMED';
+  }
+
+  confirmCancelOrder(order: Order) {
+    this.orderToCancel = order;
+    this.showCancelDialog = true;
+  }
+
+  cancelOrder() {
+    if (!this.orderToCancel) return;
+
+    this.cancellingOrderId.set(this.orderToCancel.id);
+
+    this.ordersService.cancelOrder(this.orderToCancel.id).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Pedido Cancelado',
+          detail: `El pedido ${this.orderToCancel?.order_number} ha sido cancelado`
+        });
+        this.showCancelDialog = false;
+        this.orderToCancel = null;
+        this.cancellingOrderId.set(null);
+        this.loadOrders();
+      },
+      error: (error) => {
+        console.error('Error cancelling order:', error);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: error.error?.detail || 'No se pudo cancelar el pedido'
+        });
+        this.cancellingOrderId.set(null);
+      }
+    });
+  }
+
+  getStatusLabel(status: OrderStatus): string {
+    return this.ORDER_STATUS_MAP[status]?.label || status;
+  }
+
+  getStatusSeverity(status: OrderStatus): any {
+    return this.ORDER_STATUS_MAP[status]?.severity || 'info';
+  }
+
+  getStatusIcon(status: OrderStatus): string {
+    return this.ORDER_STATUS_MAP[status]?.icon || 'pi-circle';
+  }
+
+  getPaymentLabel(status: PaymentStatus): string {
+    return this.PAYMENT_STATUS_MAP[status]?.label || status;
+  }
+
+  getPaymentSeverity(status: PaymentStatus): any {
+    return this.PAYMENT_STATUS_MAP[status]?.severity || 'info';
+  }
+
+  getPaymentIcon(status: PaymentStatus): string {
+    return this.PAYMENT_STATUS_MAP[status]?.icon || 'pi-circle';
+  }
+
+  goBack() {
+    this.router.navigate(['/']);
   }
 }

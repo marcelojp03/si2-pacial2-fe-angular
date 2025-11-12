@@ -4,6 +4,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { provideRouter, withEnabledBlockingInitialNavigation, withInMemoryScrolling } from '@angular/router';
 import Aura from '@primeng/themes/aura';
 import { providePrimeNG } from 'primeng/config';
+import { MessageService } from 'primeng/api';
 import { appRoutes } from './app.routes';
 import { oauth2Interceptor } from './core/http/oauth2.interceptor';
 
@@ -15,6 +16,7 @@ export const appConfig: ApplicationConfig = {
             withInterceptors([oauth2Interceptor])
         ),
         provideAnimationsAsync(),
-        providePrimeNG({ theme: { preset: Aura, options: { darkModeSelector: '.app-dark' } } })
+        providePrimeNG({ theme: { preset: Aura, options: { darkModeSelector: '.app-dark' } } }),
+        MessageService // Proveedor global para CartStore
     ]
 };

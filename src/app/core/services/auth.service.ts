@@ -13,6 +13,7 @@ import {
   RegisterRequest,
   User
 } from '../models/auth.model';
+import { CartStore } from '../state/cart.store';
 
 @Injectable({
   providedIn: 'root'
@@ -20,6 +21,7 @@ import {
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
+  private cartStore = inject(CartStore);
   private apiUrl = environment.api.baseUrl;
   
   private currentUserSubject = new BehaviorSubject<User | null>(this.getUserFromStorage());
@@ -35,11 +37,31 @@ export class AuthService {
 
   private checkTokenOnInit(): void {
     const token = this.getAccessToken();
-    if (token && this.isTokenExpired(token)) {
-      console.warn('[AuthService] Token expirado al iniciar');
+    const user = this.getUserFromStorage();
+    
+    if (!token || !user) {
+      // No hay sesión, no hacer nada
+      return;
+    }
+    
+    if (this.isTokenExpired(token)) {
+      console.warn('[AuthService] Token expirado al iniciar, intentando refresh...');
       this.refreshToken().subscribe({
-        error: () => this.logout()
+        next: () => {
+          console.log('[AuthService] Token refrescado exitosamente');
+          // Mantener el usuario en el BehaviorSubject
+          this.currentUserSubject.next(user);
+        },
+        error: (error) => {
+          console.error('[AuthService] No se pudo refrescar token, limpiando sesión', error);
+          this.clearStorage();
+          this.currentUserSubject.next(null);
+        }
       });
+    } else {
+      // Token válido, asegurar que el usuario esté en el BehaviorSubject
+      console.log('[AuthService] Token válido, usuario cargado desde localStorage');
+      this.currentUserSubject.next(user);
     }
   }
 
@@ -65,6 +87,23 @@ export class AuthService {
           
           // Guardar user_type para saber dónde redirigir
           localStorage.setItem('user_type', response.user_type);
+          
+          // Guardar customer_id si es cliente (para consultas de pedidos)
+          if (response.user_type === 'customer' && response.customer?.id) {
+            localStorage.setItem('customer_id', response.customer.id.toString());
+          }
+
+          // ========================================
+          // INTEGRACIÓN BACKEND CART
+          // ========================================
+          // Guardar cart_id y cargar carrito del backend
+          if (response.cart_id) {
+            console.log('[AuthService] cart_id recibido:', response.cart_id);
+            this.cartStore.setCartId(response.cart_id);
+            // setCartId() automáticamente carga el carrito desde el backend
+          } else {
+            console.warn('[AuthService] No se recibió cart_id en el login');
+          }
         }),
         catchError(error => {
           console.error('[AuthService] Error en login:', error);
@@ -144,7 +183,18 @@ export class AuthService {
 
     this.clearStorage();
     this.currentUserSubject.next(null);
-    this.router.navigate(['/auth/login']);
+
+    // ========================================
+    // LIMPIAR CARRITO AL LOGOUT
+    // ========================================
+    this.cartStore.setCartId(null);
+    this.cartStore.clear();
+    
+    // Solo redirigir si no estamos ya en una ruta de auth
+    const currentUrl = this.router.url;
+    if (!currentUrl.includes('/auth/')) {
+      this.router.navigate(['/auth/login']);
+    }
   }
 
   private saveTokens(access: string, refresh: string): void {
@@ -173,6 +223,7 @@ export class AuthService {
     localStorage.removeItem(this.REFRESH_TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
     localStorage.removeItem('user_type');  // Limpiar también el tipo de usuario
+    localStorage.removeItem('customer_id');  // Limpiar customer_id
   }
 
   getAccessToken(): string | null {

@@ -44,13 +44,13 @@ export const shoppingRoutes: Routes = [
         path: 'checkout',
         canActivate: [checkoutGuard],
         loadComponent: () =>
-          import('./components/cart/checkout.component').then(m => m.CheckoutComponent)
+          import('./components/checkout/checkout.component').then(m => m.CheckoutComponent)
       },
       {
         path: 'confirmation',
         canActivate: [checkoutGuard],
         loadComponent: () =>
-          import('./components/cart/confirmation.component').then(m => m.ConfirmationComponent)
+          import('./components/confirmation/confirmation.component').then(m => m.ConfirmationComponent)
       },
       
       // ========================================
@@ -67,6 +67,16 @@ export const shoppingRoutes: Routes = [
         canActivate: [checkoutGuard],
         loadComponent: () =>
           import('./components/orders/order-detail.component').then(m => m.OrderDetailComponent)
+      },
+      
+      // ========================================
+      // PERFIL DE CLIENTE (Requiere autenticación)
+      // ========================================
+      {
+        path: 'profile',
+        canActivate: [checkoutGuard],
+        loadComponent: () =>
+          import('./components/profile/customer-profile.component').then(m => m.CustomerProfileComponent)
       },
     ]
   }

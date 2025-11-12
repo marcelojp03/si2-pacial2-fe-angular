@@ -1,4 +1,5 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, computed, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { SharedModule } from '../../shared/shared.module';
 import { Router, RouterModule } from '@angular/router';
 import { MenubarModule } from 'primeng/menubar';
@@ -34,12 +35,6 @@ import { AuthService } from '../../core/services/auth.service';
           
           <ng-template #end>
             <div class="flex items-center gap-2">
-              <!-- Búsqueda -->
-              <p-iconfield iconPosition="left" class="hidden md:block">
-                <p-inputicon styleClass="pi pi-search" />
-                <input type="text" pInputText placeholder="Buscar productos..." class="w-64" />
-              </p-iconfield>
-              
               <!-- Carrito -->
               <p-button 
                 icon="pi pi-shopping-cart"
@@ -53,14 +48,23 @@ import { AuthService } from '../../core/services/auth.service';
               
               <!-- Usuario Logueado o Login -->
               @if (isLoggedIn()) {
-                <p-button 
-                  [label]="userName()"
-                  icon="pi pi-user"
-                  [rounded]="true"
-                  [text]="true"
-                  styleClass="font-semibold"
-                  (onClick)="menu.toggle($event)"
-                />
+                <button 
+                  class="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-surface-100 transition-colors cursor-pointer"
+                  (click)="menu.toggle($event)"
+                >
+                  @if (userAvatar()) {
+                    <img 
+                      [src]="userAvatar()" 
+                      alt="Avatar"
+                      class="w-8 h-8 rounded-full object-cover border-2 border-primary"
+                    />
+                  } @else {
+                    <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold">
+                      {{ getUserInitials() }}
+                    </div>
+                  }
+                  <span class="font-semibold text-surface-900">{{ userName() }}</span>
+                </button>
                 <p-menu #menu [model]="userMenuItems" [popup]="true" />
               } @else {
                 <p-button 
@@ -84,11 +88,23 @@ export class TopbarWidget {
   cart = inject(CartStore);
   authService = inject(AuthService);
 
-  // Computed signals para usuario logueado
-  isLoggedIn = computed(() => this.authService.isAuthenticated());
+  // Convertir Observable a Signal para reactividad
+  currentUser = toSignal(this.authService.currentUser$);
+
+  // Computed signals reactivos basados en currentUser
+  isLoggedIn = computed(() => {
+    const user = this.currentUser();
+    return !!user && this.authService.isAuthenticated();
+  });
+  
   userName = computed(() => {
-    const user = this.authService.getCurrentUser();
+    const user = this.currentUser();
     return user?.first_name || user?.email?.split('@')[0] || 'Usuario';
+  });
+  
+  userAvatar = computed(() => {
+    const user = this.currentUser();
+    return user?.avatar || '';
   });
 
   userMenuItems = [
@@ -124,43 +140,34 @@ export class TopbarWidget {
       routerLink: '/products'
     },
     {
-      label: 'Categorías',
-      icon: 'pi pi-fw pi-list',
-      items: [
-        {
-          label: 'Todas las Categorías',
-          icon: 'pi pi-fw pi-th-large',
-          routerLink: '/products'
-        },
-        {
-          separator: true
-        },
-        {
-          label: 'Ropa',
-          icon: 'pi pi-fw pi-tag',
-          routerLink: '/products',
-          queryParams: { category: 'clothing' }
-        },
-        {
-          label: 'Accesorios',
-          icon: 'pi pi-fw pi-sparkles',
-          routerLink: '/products',
-          queryParams: { category: 'accessories' }
-        },
-        {
-          label: 'Electrónica',
-          icon: 'pi pi-fw pi-mobile',
-          routerLink: '/products',
-          queryParams: { category: 'electronics' }
-        }
-      ]
-    },
-    {
       label: 'Mis Pedidos',
       icon: 'pi pi-fw pi-box',
       routerLink: '/my-orders'
     }
   ];
+
+  getUserInitials(): string {
+    const user = this.currentUser();
+    if (!user) return 'U';
+    
+    const firstName = user.first_name || '';
+    const lastName = user.last_name || '';
+    const email = user.email || '';
+    
+    if (firstName && lastName) {
+      return firstName.charAt(0).toUpperCase() + lastName.charAt(0).toUpperCase();
+    }
+    
+    if (firstName) {
+      return firstName.charAt(0).toUpperCase();
+    }
+    
+    if (email) {
+      return email.charAt(0).toUpperCase();
+    }
+    
+    return 'U';
+  }
 
   logout() {
     this.authService.logout();

@@ -4,7 +4,6 @@ import { RouterModule } from '@angular/router';
 import { RippleModule } from 'primeng/ripple';
 import { StyleClassModule } from 'primeng/styleclass';
 import { TopbarWidget } from './components/topbar.widget';
-import { FooterWidget } from './components/footer.widget';
 
 @Component({
   selector: 'app-shopping',
@@ -13,26 +12,20 @@ import { FooterWidget } from './components/footer.widget';
     SharedModule,
     RouterModule,
     TopbarWidget,
-    FooterWidget,
     RippleModule,
     StyleClassModule
   ],
   template: `
-    <div class="bg-surface-0 dark:bg-surface-900">
-      <div id="home" class="shopping-wrapper overflow-hidden">
+    <div class="bg-surface-0 dark:bg-surface-900 min-h-screen">
+      <div id="home" class="shopping-wrapper">
         <app-topbar-widget />
         <router-outlet></router-outlet>
-        <app-footer-widget />
       </div>
     </div>
   `,
   styles: [`
     :host {
       display: block;
-    }
-
-    .shopping-wrapper {
-      min-height: 100vh;
     }
   `]
 })

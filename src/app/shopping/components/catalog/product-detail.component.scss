@@ -1,0 +1,14 @@
+:host {
+  display: block;
+}
+
+:host ::ng-deep .custom-galleria {
+  .p-galleria-item-container {
+    background: transparent;
+  }
+  
+  .p-galleria-thumbnail-container {
+    background: var(--surface-0);
+    padding: 1rem;
+  }
+}
