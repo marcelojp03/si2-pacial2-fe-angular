@@ -1,8 +1,10 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
+import { Subscription, interval } from 'rxjs';
+import { switchMap, takeWhile } from 'rxjs/operators';
 import { SharedModule } from '../../../shared/shared.module';
 import { CartStore } from '../../../core/state/cart.store';
 import { AuthService } from '../../../core/services/auth.service';
@@ -24,7 +26,7 @@ import {
   templateUrl: './checkout.component.html',
   styleUrl: './checkout.component.scss'
 })
-export class CheckoutComponent implements OnInit {
+export class CheckoutComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   router = inject(Router); // Made public for template access
   private messageService = inject(MessageService);
@@ -39,6 +41,15 @@ export class CheckoutComponent implements OnInit {
   selectedAddressId = signal<number | null>(null);
   selectedPaymentMethod = signal<PaymentMethod>('CASH');
   selectedPaymentProvider = signal<PaymentProvider | null>(null);
+
+  // VPAY QR
+  showQRModal = signal(false);
+  qrImage = signal<string | null>(null);
+  orderId = signal<number | null>(null);
+  orderNumber = signal<string>('');
+  pollingSubscription: Subscription | null = null;
+  pollingAttempts = signal(0);
+  maxPollingAttempts = 100; // 5 minutos (100 * 3s)
 
   showNewAddressForm = false;
   selectedAddressIdModel: number | null = null;
@@ -59,6 +70,7 @@ export class CheckoutComponent implements OnInit {
   ];
 
   paymentProviders = [
+    { value: 'VPAY' as PaymentProvider, label: PAYMENT_PROVIDER_LABELS['VPAY'], icon: 'pi pi-qrcode' },
     { value: 'STRIPE' as PaymentProvider, label: PAYMENT_PROVIDER_LABELS['STRIPE'], icon: 'pi pi-credit-card' },
     { value: 'PAYPAL' as PaymentProvider, label: PAYMENT_PROVIDER_LABELS['PAYPAL'], icon: 'pi pi-paypal' },
     { value: 'MOCK' as PaymentProvider, label: PAYMENT_PROVIDER_LABELS['MOCK'], icon: 'pi pi-wallet' }
@@ -80,6 +92,10 @@ export class CheckoutComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadAddresses();
+  }
+
+  ngOnDestroy(): void {
+    this.stopPolling();
   }
 
   loadAddresses(): void {
@@ -179,67 +195,211 @@ export class CheckoutComponent implements OnInit {
 
     try {
       const customerId = parseInt(localStorage.getItem('customer_id') || '0');
+      const cartId = this.cartStore.cartId();
+      
       if (!customerId) {
         throw new Error('Usuario no autenticado');
       }
 
-      let addressId = this.selectedAddressId();
-      
-      if (this.showNewAddressForm) {
-        const newAddressData: CreateAddressRequest = {
-          customer: customerId,
-          street: this.checkoutForm.get('street')?.value,
-          city: this.checkoutForm.get('city')?.value,
-          state: this.checkoutForm.get('state')?.value || undefined,
-          country: this.checkoutForm.get('country')?.value,
-          postal_code: this.checkoutForm.get('postal_code')?.value,
-          is_default: this.addresses().length === 0
-        };
-
-        const newAddress = await this.addressService.createAddress(newAddressData).toPromise();
-        addressId = newAddress!.id;
-
-        if (this.checkoutForm.get('save_address')?.value) {
-          this.addresses.update(addrs => [...addrs, newAddress!]);
-        }
+      if (!cartId) {
+        throw new Error('No hay carrito activo');
       }
 
-      if (!addressId) {
-        throw new Error('No se pudo determinar la dirección de envío');
-      }
-
-      const mockCartId = 1;
-
-      const checkoutData = {
+      // Preparar datos de checkout según la opción elegida
+      let checkoutData: any = {
         customer_id: customerId,
-        shipping_address_id: addressId,
         payment_method: this.selectedPaymentMethod(),
-        payment_provider: this.selectedPaymentProvider() || undefined,
         notes: this.checkoutForm.get('notes')?.value || undefined
       };
 
-      const checkoutResponse = await this.checkoutService.checkout(mockCartId, checkoutData).toPromise();
+      // Agregar payment_provider si el método lo requiere
+      if (this.selectedPaymentProvider()) {
+        checkoutData.payment_provider = this.selectedPaymentProvider();
+      }
 
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Pedido Creado',
-        detail: `Tu pedido #${checkoutResponse!.order_number} ha sido creado exitosamente`
-      });
+      // Opción 1: Usar dirección existente
+      if (this.selectedAddressId() && !this.showNewAddressForm) {
+        checkoutData.shipping_address_id = this.selectedAddressId();
+      } 
+      // Opción 2: Crear nueva dirección sobre la marcha
+      else if (this.showNewAddressForm && this.isNewAddressValid()) {
+        checkoutData.shipping_address = {
+          line1: this.checkoutForm.get('street')?.value,
+          city: this.checkoutForm.get('city')?.value,
+          state: this.checkoutForm.get('state')?.value || '',
+          zip: this.checkoutForm.get('postal_code')?.value,
+          country: this.checkoutForm.get('country')?.value || 'Bolivia',
+          notes: this.checkoutForm.get('notes')?.value || undefined
+        };
+      } else {
+        throw new Error('Debe seleccionar o crear una dirección de envío');
+      }
 
-      this.cartStore.clear();
-      this.router.navigate(['/shopping/confirmation'], {
-        queryParams: { orderId: checkoutResponse!.id }
-      });
+      console.log('[Checkout] Enviando datos:', checkoutData);
+
+      const checkoutResponse = await this.checkoutService.checkout(cartId, checkoutData).toPromise();
+
+      console.log('[Checkout] Respuesta:', checkoutResponse);
+
+      // Verificar si es pago VPAY
+      if (checkoutResponse!.vpay_qr) {
+        this.handleVPayCheckout(checkoutResponse!);
+      } else {
+        // Pago auto-confirmado (MOCK, CASH, etc.)
+        this.handleAutoConfirmedCheckout(checkoutResponse!);
+      }
 
     } catch (error: any) {
-      console.error('Error en el checkout:', error);
+      console.error('[Checkout] Error:', error);
       this.messageService.add({
         severity: 'error',
         summary: 'Error',
-        detail: error.message || 'Hubo un error al procesar tu pedido'
+        detail: error.error?.detail || error.error?.error || error.message || 'Hubo un error al procesar tu pedido'
       });
     } finally {
       this.processing.set(false);
+    }
+  }
+
+  handleVPayCheckout(response: any): void {
+    // Guardar datos del pedido
+    this.orderId.set(response.id);
+    this.orderNumber.set(response.order_number);
+    
+    // Convertir base64 a imagen
+    this.qrImage.set(`data:image/png;base64,${response.vpay_qr.qr_image}`);
+    
+    // Mostrar modal con QR
+    this.showQRModal.set(true);
+    
+    // Iniciar polling
+    this.startPaymentPolling();
+    
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Pago Pendiente',
+      detail: 'Escanea el código QR para completar el pago',
+      sticky: true
+    });
+  }
+
+  handleAutoConfirmedCheckout(response: any): void {
+    // Verificar que el pedido fue confirmado automáticamente
+    if (response.status === 'CONFIRMED' && response.payment_status === 'PAID') {
+      this.messageService.add({
+        severity: 'success',
+        summary: '¡Compra Exitosa!',
+        detail: `Tu pedido #${response.order_number} ha sido confirmado`,
+        life: 5000
+      });
+    } else {
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Pedido Creado',
+        detail: `Tu pedido #${response.order_number} ha sido creado`,
+        life: 5000
+      });
+    }
+
+    // Limpiar carrito local
+    this.cartStore.clear();
+    
+    // Redirigir a página de éxito con el pedido
+    this.router.navigate(['/shopping/order-success'], {
+      state: { order: response }
+    });
+  }
+
+  startPaymentPolling(): void {
+    this.pollingAttempts.set(0);
+    
+    // Consultar cada 3 segundos
+    this.pollingSubscription = interval(3000).pipe(
+      takeWhile(() => this.pollingAttempts() < this.maxPollingAttempts),
+      switchMap(() => {
+        this.pollingAttempts.update(n => n + 1);
+        return this.checkoutService.checkVPayPaymentStatus(this.orderId()!);
+      })
+    ).subscribe({
+      next: (response) => {
+        console.log(`[VPAY] Intento ${this.pollingAttempts()}:`, response);
+        
+        if (response.payment_status === 'PAID') {
+          // ¡Pago confirmado!
+          this.handlePaymentSuccess(response);
+        } else if (this.pollingAttempts() >= this.maxPollingAttempts) {
+          // Timeout
+          this.handlePaymentTimeout();
+        }
+        // Si aún está PENDING, continúa el polling
+      },
+      error: (error) => {
+        console.error('[VPAY] Error verificando pago:', error);
+        // Continuar polling aunque haya error
+      }
+    });
+  }
+
+  handlePaymentSuccess(response: any): void {
+    // Detener polling
+    this.stopPolling();
+    
+    // Cerrar modal
+    this.showQRModal.set(false);
+    
+    // Limpiar toastr anterior
+    this.messageService.clear();
+    
+    // Mostrar éxito
+    this.messageService.add({
+      severity: 'success',
+      summary: '¡Pago Exitoso!',
+      detail: `Pedido ${this.orderNumber()} confirmado y pagado`,
+      life: 5000
+    });
+    
+    // Limpiar carrito
+    this.cartStore.clear();
+    
+    // Redirigir a página de éxito
+    this.router.navigate(['/shopping/order-success'], {
+      state: { order: response }
+    });
+  }
+
+  handlePaymentTimeout(): void {
+    this.stopPolling();
+    
+    this.messageService.clear();
+    this.messageService.add({
+      severity: 'warn',
+      summary: 'Tiempo Agotado',
+      detail: 'El tiempo de espera ha expirado. Puedes verificar tu pedido en "Mis Pedidos"',
+      life: 8000
+    });
+    
+    this.showQRModal.set(false);
+    
+    // Redirigir a mis pedidos
+    this.router.navigate(['/shopping/my-orders']);
+  }
+
+  cancelVPayPayment(): void {
+    this.stopPolling();
+    this.showQRModal.set(false);
+    this.messageService.clear();
+    
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Pago Cancelado',
+      detail: 'Has cancelado el proceso de pago'
+    });
+  }
+
+  stopPolling(): void {
+    if (this.pollingSubscription) {
+      this.pollingSubscription.unsubscribe();
+      this.pollingSubscription = null;
     }
   }
 

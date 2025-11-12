@@ -52,6 +52,12 @@ export const shoppingRoutes: Routes = [
         loadComponent: () =>
           import('./components/confirmation/confirmation.component').then(m => m.ConfirmationComponent)
       },
+      {
+        path: 'order-success',
+        canActivate: [checkoutGuard],
+        loadComponent: () =>
+          import('./components/confirmation/confirmation.component').then(m => m.ConfirmationComponent)
+      },
       
       // ========================================
       // MIS PEDIDOS (Requiere autenticación)

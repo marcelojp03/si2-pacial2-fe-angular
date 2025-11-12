@@ -2,7 +2,13 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import type { CheckoutRequest, CheckoutResponse, ConfirmPaymentRequest, ConfirmPaymentResponse } from '../models/checkout.model';
+import type { 
+  CheckoutRequest, 
+  CheckoutResponse, 
+  ConfirmPaymentRequest, 
+  ConfirmPaymentResponse,
+  PaymentStatusResponse 
+} from '../models/checkout.model';
 
 @Injectable({
   providedIn: 'root'
@@ -25,7 +31,7 @@ export class CheckoutService {
   }
 
   /**
-   * Confirmar pago de una orden
+   * Confirmar pago de una orden (solo para pasarelas reales, no para MOCK/VPAY)
    * @param orderId ID de la orden
    * @param paymentData Datos del pago
    * @returns Observable con confirmación de pago
@@ -34,6 +40,17 @@ export class CheckoutService {
     return this.http.post<ConfirmPaymentResponse>(
       `${this.apiUrl}/orders/${orderId}/confirm_payment/`,
       paymentData
+    );
+  }
+
+  /**
+   * Verificar estado de pago VPAY (polling)
+   * @param orderId ID de la orden
+   * @returns Observable con estado del pago
+   */
+  checkVPayPaymentStatus(orderId: number): Observable<PaymentStatusResponse> {
+    return this.http.get<PaymentStatusResponse>(
+      `${this.apiUrl}/orders/${orderId}/check-vpay-payment/`
     );
   }
 

@@ -1,7 +1,7 @@
 export const environment = {
   production: true,
   api: {
-    baseUrl: 'https://your-production-api.com/api',
+    baseUrl: 'https://YOUR_BACKEND_API_URL/api', // ⚠️ Cambiar por URL real de producción
     timeout: 30000,
   },
   mock: false,

@@ -207,7 +207,7 @@
           <div class="p-5">
             <!-- Productos -->
             <div class="space-y-3 mb-4">
-              @for (item of cartItems(); track item.variantId) {
+              @for (item of cartItems(); track $index) {
                 <div class="flex gap-3">
                   <img 
                     [src]="item.image || 'assets/placeholder.png'" 
@@ -272,4 +272,59 @@
       </div>
     </div>
   </div>
+
+  <!-- VPAY QR Modal -->
+  @if (showQRModal()) {
+    <div class="qr-modal-overlay">
+      <div class="qr-modal">
+        <div class="qr-header">
+          <h2 class="text-2xl font-bold text-surface-900 dark:text-surface-0">
+            Escanea el código QR
+          </h2>
+          <p class="text-surface-600 dark:text-surface-400 mt-2">
+            Pedido: <strong class="text-primary">{{ orderNumber() }}</strong>
+          </p>
+        </div>
+
+        <div class="qr-body">
+          <div class="qr-image-container">
+            <img [src]="qrImage()" alt="QR Code VPAY" class="qr-image" />
+          </div>
+
+          <div class="instructions">
+            <h4 class="text-lg font-semibold text-surface-900 dark:text-surface-0 mb-3">
+              📱 Instrucciones:
+            </h4>
+            <ol class="space-y-2 text-surface-700 dark:text-surface-300">
+              <li>1. Abre tu aplicación bancaria</li>
+              <li>2. Selecciona "Pagar con QR"</li>
+              <li>3. Escanea este código</li>
+              <li>4. Confirma el pago</li>
+            </ol>
+          </div>
+
+          <div class="waiting-status">
+            <p-progressSpinner strokeWidth="4" styleClass="w-12 h-12" />
+            <p class="text-surface-700 dark:text-surface-300 font-medium mt-3">
+              Esperando confirmación del pago...
+            </p>
+            <small class="text-surface-500 dark:text-surface-500 mt-2 block">
+              Intento {{ pollingAttempts() }} de {{ maxPollingAttempts }}
+            </small>
+          </div>
+        </div>
+
+        <div class="qr-footer">
+          <p-button 
+            label="Cancelar Pago" 
+            icon="pi pi-times"
+            severity="danger"
+            [outlined]="true"
+            styleClass="w-full"
+            (onClick)="cancelVPayPayment()"
+          />
+        </div>
+      </div>
+    </div>
+  }
 </div>

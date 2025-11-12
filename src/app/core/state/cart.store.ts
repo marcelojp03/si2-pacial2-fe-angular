@@ -4,13 +4,14 @@ import { CartService, type Cart, type CartItem } from '../../shopping/components
 import { MessageService } from 'primeng/api';
 
 export interface CartItemLocal {
-  variantId: number;
+  itemId?: number;      // ID del CartItem en el backend (undefined para items solo en localStorage)
+  variantId: number;    // ID de la variante del producto
   productId: number;
   name: string;
   price: number;
   qty: number;
-  image?: string;
-  code?: string;
+  image: string;        // Siempre debe ser string (puede ser vacío '')
+  code: string;         // Siempre debe ser string (puede ser vacío '')
 }
 
 @Injectable({
@@ -134,13 +135,14 @@ export class CartStore {
    */
   private syncBackendCart(cart: Cart): void {
     const localItems: CartItemLocal[] = cart.items.map(item => ({
-      variantId: item.variant.id,
-      productId: 0, // El backend no devuelve product_id directamente
-      name: item.variant.product_name,
+      itemId: item.id,
+      variantId: item.variant,
+      productId: 0,
+      name: item.product_name,
       price: parseFloat(item.price),
       qty: item.quantity,
-      code: item.variant.code,
-      image: undefined
+      code: item.variant_code,
+      image: item.product_image || ''
     }));
 
     this.itemsSignal.set(localItems);
@@ -244,13 +246,16 @@ export class CartStore {
    * Actualiza cantidad en el backend
    */
   private updateQtyBackend(variantId: number, qty: number): void {
-    // Encontrar el item_id del backend
+    // Encontrar el item para obtener su itemId del backend
     const item = this.itemsSignal().find(i => i.variantId === variantId);
-    if (!item) return;
+    if (!item?.itemId) {
+      console.warn('[CartStore] No se encontró itemId para variantId:', variantId);
+      return;
+    }
 
     this.loadingSignal.set(true);
 
-    this.cartService.updateItemQuantity(variantId, qty).pipe(
+    this.cartService.updateItemQuantity(item.itemId, qty).pipe(
       tap(() => {
         // Actualizar estado local optimistamente
         this.updateQtyLocal(variantId, qty);
@@ -310,7 +315,14 @@ export class CartStore {
     const cartId = this.cartIdSignal();
     
     if (cartId) {
-      this.removeItemBackend(cartId, variantId);
+      // Buscar el item para obtener su itemId del backend
+      const item = this.itemsSignal().find(i => i.variantId === variantId);
+      if (item?.itemId) {
+        this.removeItemBackend(cartId, item.itemId);
+      } else {
+        // Si no tiene itemId, eliminarlo localmente
+        this.removeItemLocal(variantId);
+      }
     } else {
       this.removeItemLocal(variantId);
     }
@@ -319,10 +331,10 @@ export class CartStore {
   /**
    * Elimina item del backend
    */
-  private removeItemBackend(cartId: number, variantId: number): void {
+  private removeItemBackend(cartId: number, itemId: number): void {
     this.loadingSignal.set(true);
 
-    this.cartService.removeItem(cartId, variantId).pipe(
+    this.cartService.removeItem(cartId, itemId).pipe(
       tap(cart => {
         this.syncBackendCart(cart);
         this.messageService.add({

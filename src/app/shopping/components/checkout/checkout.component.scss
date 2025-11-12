@@ -2,3 +2,132 @@
 :host {
   display: block;
 }
+
+// VPAY QR Modal Styles
+.qr-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.qr-modal {
+  background: var(--surface-card);
+  border-radius: 1rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease-out;
+}
+
+.qr-header {
+  padding: 2rem 2rem 1.5rem;
+  text-align: center;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.qr-body {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+.qr-image-container {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-image {
+  width: 280px;
+  height: 280px;
+  display: block;
+  border-radius: 0.5rem;
+}
+
+.instructions {
+  width: 100%;
+  background: var(--surface-50);
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--surface-border);
+
+  ol {
+    margin: 0;
+    padding-left: 1.5rem;
+  }
+
+  li {
+    padding: 0.5rem 0;
+  }
+}
+
+.waiting-status {
+  text-align: center;
+  padding: 1.5rem;
+  background: var(--primary-50);
+  border-radius: 0.75rem;
+  width: 100%;
+}
+
+.qr-footer {
+  padding: 1.5rem 2rem 2rem;
+  border-top: 1px solid var(--surface-border);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Responsive
+@media (max-width: 640px) {
+  .qr-modal {
+    margin: 0;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+
+  .qr-image {
+    width: 220px;
+    height: 220px;
+  }
+
+  .qr-header,
+  .qr-body,
+  .qr-footer {
+    padding: 1.5rem;
+  }
+}

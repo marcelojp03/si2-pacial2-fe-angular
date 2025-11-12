@@ -75,11 +75,11 @@ export class ProductDetailComponent implements OnInit {
       
       const mainImage = this.product()!.images?.find(img => img.is_primary)?.url || 
                        this.product()!.images?.[0]?.url ||
-                       this.product()!.main_image;
+                       this.product()!.main_image || '';
                        
       const price = parseFloat(this.product()!.base_price) || 0;
       
-      // Usar el primer variant si existe, sino crear uno genérico
+      // Usar el primer variant si existe, sino crear uno genérico con el ID del producto
       const variantId = this.product()!.variants?.[0]?.id || this.product()!.id;
       
       // CartStore maneja automáticamente localStorage o backend según haya cart_id
@@ -89,8 +89,8 @@ export class ProductDetailComponent implements OnInit {
         name: this.product()!.name,
         price: price,
         qty: 1,
-        image: mainImage,
-        code: this.product()!.sku
+        image: mainImage,  // Siempre string (puede ser vacío)
+        code: this.product()!.sku || ''  // Asegurar que siempre sea string
       });
       
       // CartStore ya muestra el toast, resetear loading después de 500ms

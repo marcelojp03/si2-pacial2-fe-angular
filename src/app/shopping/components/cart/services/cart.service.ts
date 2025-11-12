@@ -7,16 +7,16 @@ import type { CheckoutData, CheckoutResponse } from '../interfaces/cart.interfac
 
 export interface CartItem {
   id: number;
-  variant: {
-    id: number;
-    code: string;
-    product_name: string;
-    price: string;
-    attributes?: Record<string, string>;
-  };
+  cart: number;
+  variant: number;  // ✅ ID de la variante (no es un objeto)
+  variant_code: string;
+  product_name: string;
+  product_image: string | null;
+  variant_price: string;
   quantity: number;
   price: string;
   subtotal: string;
+  added_at: string;
 }
 
 export interface Cart {

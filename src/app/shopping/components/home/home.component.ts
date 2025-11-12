@@ -63,15 +63,16 @@ export class ShoppingHomeComponent implements OnInit {
   addToCart(product: ProductListItem) {
     this.addingToCart.set(product.id);
     
-    // CartStore maneja automáticamente localStorage o backend según haya cart_id
+    // Usar el ID del producto como variantId temporal (productos sin variantes)
+    // El backend manejará la variante por defecto
     this.cart.addItem({
-      variantId: product.id,
+      variantId: product.id,  // ID único del producto como variante por defecto
       productId: product.id,
       name: product.name,
       price: product.price_range?.price || 0,
       qty: 1,
-      image: product.main_image,
-      code: product.sku
+      image: product.main_image || '',  // Asegurar que siempre haya un string (puede ser vacío)
+      code: product.sku || ''  // Asegurar que siempre haya un string
     });
     
     // CartStore ya muestra el toast, resetear loading después de 500ms
