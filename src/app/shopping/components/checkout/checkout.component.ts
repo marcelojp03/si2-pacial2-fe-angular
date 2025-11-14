@@ -48,8 +48,16 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   orderId = signal<number | null>(null);
   orderNumber = signal<string>('');
   pollingSubscription: Subscription | null = null;
+  timerSubscription: Subscription | null = null; // Suscripción del temporizador
   pollingAttempts = signal(0);
   maxPollingAttempts = 100; // 5 minutos (100 * 3s)
+  remainingSeconds = signal(300); // 5 minutos en segundos
+  timerDisplay = computed(() => {
+    const seconds = this.remainingSeconds();
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  });
 
   showNewAddressForm = false;
   selectedAddressIdModel: number | null = null;
@@ -57,9 +65,11 @@ export class CheckoutComponent implements OnInit, OnDestroy {
 
   cartItems = this.cartStore.items;
   subtotal = this.cartStore.totalAmount;
-  tax = computed(() => this.subtotal() * 0.13);
-  shippingCost = computed(() => this.subtotal() >= 200 ? 0 : 30);
-  total = computed(() => this.subtotal() + this.tax() + this.shippingCost());
+  tax = signal(0); // Impuesto (debe venir del backend)
+  discount = signal(0); // Descuento aplicado (cupones, promociones)
+  shippingCost = signal(0); // Costo de envío (debe venir del backend)
+  total = computed(() => this.subtotal() + this.tax() + this.shippingCost() - this.discount());
+  loadingTotals = signal(true); // Estado de carga de totales
 
   paymentMethods = [
     { value: 'CREDIT_CARD' as PaymentMethod, label: PAYMENT_METHOD_LABELS['CREDIT_CARD'], icon: 'pi pi-credit-card' },
@@ -85,17 +95,48 @@ export class CheckoutComponent implements OnInit, OnDestroy {
       state: [''],
       country: ['Bolivia'],
       postal_code: [''],
-      save_address: [false],
-      notes: ['']
+      save_address: [false]
+      // notes removed - backend Order model doesn't have this field
     });
   }
 
   ngOnInit(): void {
     this.loadAddresses();
+    this.loadTotals(); // Cargar totales calculados desde el backend
   }
 
   ngOnDestroy(): void {
     this.stopPolling();
+  }
+
+  loadTotals(): void {
+    const cartId = this.cartStore.cartId();
+    if (!cartId) {
+      console.warn('[Checkout] No cartId found');
+      this.loadingTotals.set(false);
+      return;
+    }
+
+    this.loadingTotals.set(true);
+    this.checkoutService.calculateTotals(cartId).subscribe({
+      next: (response) => {
+        console.log('[Checkout] Totals calculated:', response);
+        this.tax.set(response.tax);
+        this.shippingCost.set(response.shipping_cost);
+        this.discount.set(response.discount);
+        this.loadingTotals.set(false);
+        // El total se calcula automáticamente con el computed()
+      },
+      error: (error) => {
+        console.error('[Checkout] Error calculando totales:', error);
+        this.loadingTotals.set(false);
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Advertencia',
+          detail: 'Error al calcular totales del carrito'
+        });
+      }
+    });
   }
 
   loadAddresses(): void {
@@ -152,9 +193,16 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   selectPaymentMethod(method: PaymentMethod): void {
     this.selectedPaymentMethod.set(method);
     this.selectedPaymentMethodModel = method;
-    if (method !== 'CREDIT_CARD' && method !== 'DEBIT_CARD') {
+    
+    // Auto-seleccionar proveedor según el método
+    if (method === 'QR') {
+      // QR siempre usa VPAY
+      this.selectedPaymentProvider.set('VPAY');
+    } else if (method !== 'CREDIT_CARD' && method !== 'DEBIT_CARD') {
+      // CASH, BANK_TRANSFER no necesitan proveedor específico
       this.selectedPaymentProvider.set(null);
     }
+    // CREDIT_CARD y DEBIT_CARD mantienen el proveedor seleccionado manualmente
   }
 
   selectPaymentProvider(provider: PaymentProvider): void {
@@ -209,7 +257,9 @@ export class CheckoutComponent implements OnInit, OnDestroy {
       let checkoutData: any = {
         customer_id: customerId,
         payment_method: this.selectedPaymentMethod(),
-        notes: this.checkoutForm.get('notes')?.value || undefined
+        shipping_cost: this.shippingCost(), // Costo de envío calculado
+        discount: this.discount() // Descuento aplicado (cupones/promociones)
+        // notes removed - backend Order model doesn't have this field
       };
 
       // Agregar payment_provider si el método lo requiere
@@ -228,8 +278,8 @@ export class CheckoutComponent implements OnInit, OnDestroy {
           city: this.checkoutForm.get('city')?.value,
           state: this.checkoutForm.get('state')?.value || '',
           zip: this.checkoutForm.get('postal_code')?.value,
-          country: this.checkoutForm.get('country')?.value || 'Bolivia',
-          notes: this.checkoutForm.get('notes')?.value || undefined
+          country: this.checkoutForm.get('country')?.value || 'Bolivia'
+          // notes removed - backend Address model doesn't need this field
         };
       } else {
         throw new Error('Debe seleccionar o crear una dirección de envío');
@@ -312,10 +362,23 @@ export class CheckoutComponent implements OnInit, OnDestroy {
 
   startPaymentPolling(): void {
     this.pollingAttempts.set(0);
+    this.remainingSeconds.set(300); // Reiniciar timer a 5 minutos
     
-    // Consultar cada 3 segundos
+    // Temporizador de cuenta regresiva (cada 1 segundo)
+    this.timerSubscription = interval(1000).pipe(
+      takeWhile(() => this.remainingSeconds() > 0)
+    ).subscribe(() => {
+      this.remainingSeconds.update(s => Math.max(0, s - 1));
+      
+      // Si el tiempo se agota, detener todo
+      if (this.remainingSeconds() === 0) {
+        this.handlePaymentTimeout();
+      }
+    });
+    
+    // Polling de estado de pago (cada 3 segundos)
     this.pollingSubscription = interval(3000).pipe(
-      takeWhile(() => this.pollingAttempts() < this.maxPollingAttempts),
+      takeWhile(() => this.pollingAttempts() < this.maxPollingAttempts && this.remainingSeconds() > 0),
       switchMap(() => {
         this.pollingAttempts.update(n => n + 1);
         return this.checkoutService.checkVPayPaymentStatus(this.orderId()!);
@@ -397,9 +460,16 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   }
 
   stopPolling(): void {
+    // Detener polling de estado de pago
     if (this.pollingSubscription) {
       this.pollingSubscription.unsubscribe();
       this.pollingSubscription = null;
+    }
+    
+    // Detener temporizador
+    if (this.timerSubscription) {
+      this.timerSubscription.unsubscribe();
+      this.timerSubscription = null;
     }
   }
 

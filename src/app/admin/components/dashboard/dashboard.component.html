@@ -1,0 +1,91 @@
+<p-toast />
+
+<div class="grid grid-cols-12 gap-6">
+  <!-- Header Card -->
+  <div class="col-span-12">
+    <div class="card">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/20">
+            <i class="pi pi-chart-line text-3xl text-blue-600 dark:text-blue-400"></i>
+          </div>
+          <div>
+            <h1 class="mb-1 text-2xl font-bold text-surface-900 dark:text-surface-0">
+              Dashboard
+            </h1>
+            <p class="text-surface-600 dark:text-surface-400">
+              Panel principal y métricas del sistema
+            </p>
+          </div>
+        </div>
+        <p-button
+          icon="pi pi-refresh"
+          [rounded]="true"
+          [outlined]="true"
+          severity="secondary"
+          (onClick)="loadData()"
+          [loading]="loading()"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  @for (stat of statsCards(); track stat.label) {
+    <div class="col-span-12 md:col-span-6 lg:col-span-3">
+      <app-stats-card [config]="stat" />
+    </div>
+  }
+
+  <!-- Quick Actions -->
+  <div class="col-span-12">
+    <div class="card">
+      <h2 class="mb-6 text-xl font-semibold text-surface-900 dark:text-surface-0">
+        Accesos Rápidos
+      </h2>
+      <div class="grid grid-cols-12 gap-4">
+        @for (action of quickActions; track action.label) {
+          <div class="col-span-12 md:col-span-6 lg:col-span-3">
+            <button
+              (click)="navigateTo(action.route)"
+              class="flex w-full flex-col items-center gap-3 rounded-lg p-6 text-white transition-all hover:shadow-lg {{getColorClass(action.color)}}"
+            >
+              <i class="pi {{action.icon}} text-4xl"></i>
+              <span class="text-center font-semibold">{{action.label}}</span>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Activity (placeholder for future) -->
+  <div class="col-span-12 lg:col-span-8">
+    <div class="card">
+      <h2 class="mb-4 text-xl font-semibold text-surface-900 dark:text-surface-0">
+        Actividad Reciente
+      </h2>
+      <div class="flex flex-col items-center justify-center py-12">
+        <i class="pi pi-clock mb-4 text-6xl text-surface-300 dark:text-surface-600"></i>
+        <p class="text-surface-500 dark:text-surface-400">
+          Próximamente: historial de actividad
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Stats (placeholder for future charts) -->
+  <div class="col-span-12 lg:col-span-4">
+    <div class="card">
+      <h2 class="mb-4 text-xl font-semibold text-surface-900 dark:text-surface-0">
+        Gráficas
+      </h2>
+      <div class="flex flex-col items-center justify-center py-12">
+        <i class="pi pi-chart-bar mb-4 text-6xl text-surface-300 dark:text-surface-600"></i>
+        <p class="text-surface-500 dark:text-surface-400">
+          Próximamente: gráficas estadísticas
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

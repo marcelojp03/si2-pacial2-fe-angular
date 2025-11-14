@@ -1,0 +1,328 @@
+<p-toast />
+
+<div class="grid grid-cols-12 gap-6">
+  <!-- Header Card -->
+  <div class="col-span-12">
+    <div class="card">
+      <div class="flex items-center gap-4">
+        <div class="flex h-14 w-14 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/20">
+          <i class="pi pi-tags text-3xl text-purple-600 dark:text-purple-400"></i>
+        </div>
+        <div>
+          <h1 class="mb-1 text-2xl font-bold text-surface-900 dark:text-surface-0">
+            Atributos de Producto
+          </h1>
+          <p class="text-surface-600 dark:text-surface-400">
+            Gestiona los atributos configurables para productos
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toolbar + Table Card -->
+  <div class="col-span-12">
+    <div class="card">
+      <!-- Toolbar -->
+      <p-toolbar styleClass="mb-6 gap-2">
+        <ng-template #start>
+          <p-button
+            label="Nuevo"
+            icon="pi pi-plus"
+            severity="primary"
+            (onClick)="openNew()"
+          />
+          <p-button
+            label="Eliminar"
+            icon="pi pi-trash"
+            severity="danger"
+            (onClick)="deleteSelected()"
+            [disabled]="!selectedAttributes() || selectedAttributes().length === 0"
+          />
+        </ng-template>
+        <ng-template #end>
+          <p-button
+            label="Exportar"
+            icon="pi pi-upload"
+            severity="secondary"
+            [outlined]="true"
+            (onClick)="exportCSV()"
+          />
+        </ng-template>
+      </p-toolbar>
+
+      <!-- Table -->
+      <p-table
+        #dt
+        [value]="attributes()"
+        [rows]="10"
+        [paginator]="true"
+        [globalFilterFields]="['name', 'code', 'type']"
+        [tableStyle]="{ 'min-width': '75rem' }"
+        [(selection)]="selectedAttributes"
+        [rowHover]="true"
+        dataKey="id"
+        currentPageReportTemplate="{first} a {last} de {totalRecords} atributos"
+        [showCurrentPageReport]="true"
+        [loading]="loading()"
+      >
+        <ng-template #caption>
+          <div class="flex items-center justify-between">
+            <p-iconfield>
+              <p-inputicon>
+                <i class="pi pi-search"></i>
+              </p-inputicon>
+              <input
+                pInputText
+                type="text"
+                (input)="onGlobalFilter(dt, $event)"
+                placeholder="Buscar..."
+                class="w-full"
+              />
+            </p-iconfield>
+            <p-button
+              icon="pi pi-refresh"
+              [rounded]="true"
+              [outlined]="true"
+              severity="secondary"
+              size="small"
+              (onClick)="loadAttributes()"
+            />
+          </div>
+        </ng-template>
+
+        <ng-template #header>
+          <tr>
+            <th style="width: 4rem">
+              <p-tableHeaderCheckbox />
+            </th>
+            <th pSortableColumn="name" style="min-width:15rem">
+              Nombre <p-sortIcon field="name" />
+            </th>
+            <th pSortableColumn="code" style="min-width:10rem">
+              Código <p-sortIcon field="code" />
+            </th>
+            <th pSortableColumn="type" style="min-width:10rem">
+              Tipo <p-sortIcon field="type" />
+            </th>
+            <th style="min-width:8rem">
+              Requerido
+            </th>
+            <th style="min-width:8rem">
+              Estado
+            </th>
+            <th style="min-width:10rem">Acciones</th>
+          </tr>
+        </ng-template>
+
+        <ng-template #body let-attribute>
+          <tr>
+            <td>
+              <p-tableCheckbox [value]="attribute" />
+            </td>
+            <td>
+              <span class="font-semibold">{{attribute.name}}</span>
+              @if (attribute.description) {
+                <br>
+                <small class="text-surface-500">{{attribute.description}}</small>
+              }
+            </td>
+            <td>
+              <code class="rounded bg-surface-100 px-2 py-1 text-sm dark:bg-surface-800">
+                {{attribute.code}}
+              </code>
+            </td>
+            <td>
+              <p-tag
+                [value]="attribute.type"
+                [severity]="getTypeSeverity(attribute.type)"
+              />
+            </td>
+            <td>
+              <i class="pi" [ngClass]="attribute.required ? 'pi-check text-green-500' : 'pi-times text-red-500'"></i>
+            </td>
+            <td>
+              <p-tag
+                [value]="attribute.active ? 'Activo' : 'Inactivo'"
+                [severity]="attribute.active ? 'success' : 'danger'"
+              />
+            </td>
+            <td>
+              <div class="flex gap-2">
+                <p-button
+                  icon="pi pi-pencil"
+                  [rounded]="true"
+                  [outlined]="true"
+                  severity="secondary"
+                  size="small"
+                  (onClick)="edit(attribute)"
+                />
+                <p-button
+                  icon="pi pi-trash"
+                  [rounded]="true"
+                  [outlined]="true"
+                  severity="danger"
+                  size="small"
+                  (onClick)="delete(attribute)"
+                />
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template #emptymessage>
+          <tr>
+            <td colspan="7" class="text-center">
+              No se encontraron atributos
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+</div>
+
+<!-- Dialog para Crear/Editar -->
+<p-dialog
+  [(visible)]="attributeDialog"
+  [style]="{ width: '90vw', 'max-width': '700px' }"
+  [header]="currentAttribute().id ? 'Editar Atributo' : 'Nuevo Atributo'"
+  [modal]="true"
+  styleClass="p-fluid"
+>
+  <ng-template #content>
+    <div class="grid grid-cols-12 gap-4">
+      <!-- Basic Info Section -->
+      <div class="col-span-12">
+        <h6 class="mb-3 border-b pb-2 text-base font-semibold text-surface-700 dark:text-surface-300">
+          Información Básica
+        </h6>
+      </div>
+
+      <!-- Name -->
+      <div class="col-span-12 md:col-span-8">
+        <label for="name" class="mb-2 block text-sm font-medium">Nombre *</label>
+        <input
+          pInputText
+          id="name"
+          [(ngModel)]="currentAttribute().name"
+          required
+          [fluid]="true"
+          placeholder="Ej: Color, Talla, Peso"
+        />
+        @if (submitted() && !currentAttribute().name) {
+          <small class="text-red-500">El nombre es requerido</small>
+        }
+      </div>
+
+      <!-- Code -->
+      <div class="col-span-12 md:col-span-4">
+        <label for="code" class="mb-2 block text-sm font-medium">Código *</label>
+        <input
+          pInputText
+          id="code"
+          [(ngModel)]="currentAttribute().code"
+          required
+          [fluid]="true"
+          placeholder="Ej: COLOR"
+        />
+        @if (submitted() && !currentAttribute().code) {
+          <small class="text-red-500">El código es requerido</small>
+        }
+      </div>
+
+      <!-- Description -->
+      <div class="col-span-12">
+        <label for="description" class="mb-2 block text-sm font-medium">Descripción</label>
+        <input
+          pInputText
+          id="description"
+          [(ngModel)]="currentAttribute().description"
+          [fluid]="true"
+          placeholder="Descripción del atributo"
+        />
+      </div>
+
+      <!-- Configuration Section -->
+      <div class="col-span-12">
+        <h6 class="mb-3 border-b pb-2 text-base font-semibold text-surface-700 dark:text-surface-300">
+          Configuración
+        </h6>
+      </div>
+
+      <!-- Type -->
+      <div class="col-span-12 md:col-span-6">
+        <label for="type" class="mb-2 block text-sm font-medium">Tipo *</label>
+        <p-select
+          id="type"
+          [(ngModel)]="currentAttribute().type"
+          [options]="typeOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Selecciona un tipo"
+          [style]="{ width: '100%' }"
+          appendTo="body"
+        />
+      </div>
+
+      <!-- Values (for select/multiselect) -->
+      @if (currentAttribute().type === 'select' || currentAttribute().type === 'multiselect') {
+        <div class="col-span-12 md:col-span-6">
+          <label for="values" class="mb-2 block text-sm font-medium">Valores</label>
+          <input
+            pInputText
+            id="values"
+            [(ngModel)]="currentAttribute().description"
+            [fluid]="true"
+            placeholder="Ej: Rojo,Azul,Verde (separados por comas)"
+          />
+          <small class="text-surface-500">Separa los valores con comas</small>
+        </div>
+      }
+
+      <!-- Required -->
+      <div class="col-span-12 md:col-span-6">
+        <div class="flex items-center gap-2">
+          <p-checkbox
+            [(ngModel)]="currentAttribute().required"
+            [binary]="true"
+            inputId="required"
+          />
+          <label for="required" class="cursor-pointer text-sm font-medium">Campo requerido</label>
+        </div>
+      </div>
+
+      <!-- Active -->
+      <div class="col-span-12 md:col-span-6">
+        <div class="flex items-center gap-2">
+          <p-checkbox
+            [(ngModel)]="currentAttribute().active"
+            [binary]="true"
+            inputId="active"
+          />
+          <label for="active" class="cursor-pointer text-sm font-medium">Activo</label>
+        </div>
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template #footer>
+    <div class="flex gap-3 justify-end">
+      <p-button
+        label="Cancelar"
+        icon="pi pi-times"
+        [outlined]="true"
+        severity="secondary"
+        (onClick)="hideDialog()"
+      />
+      <p-button
+        label="Guardar"
+        icon="pi pi-check"
+        (onClick)="save()"
+      />
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Confirmación de Eliminación -->
+<p-confirmdialog [style]="{ width: '450px' }" />

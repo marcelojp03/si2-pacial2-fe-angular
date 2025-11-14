@@ -18,6 +18,27 @@ export class CheckoutService {
   private apiUrl = `${environment.api.baseUrl}/sales`;
 
   /**
+   * Calcular totales del carrito (subtotal, impuestos, envío, descuento)
+   * @param cartId ID del carrito
+   * @returns Observable con totales calculados desde el backend
+   */
+  calculateTotals(cartId: number): Observable<{
+    subtotal: number;
+    tax: number;
+    shipping_cost: number;
+    discount: number;
+    total: number;
+  }> {
+    return this.http.get<{
+      subtotal: number;
+      tax: number;
+      shipping_cost: number;
+      discount: number;
+      total: number;
+    }>(`${this.apiUrl}/carts/${cartId}/calculate-totals/`);
+  }
+
+  /**
    * Hacer checkout del carrito y crear orden
    * @param cartId ID del carrito
    * @param checkoutData Datos del checkout

@@ -1,0 +1,116 @@
+<p-toast />
+
+<div class="grid grid-cols-12 gap-6">
+  <div class="col-span-12">
+    <div class="card">
+      <div class="flex items-center gap-4">
+        <div class="flex h-14 w-14 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/20">
+          <i class="pi pi-sliders-h text-3xl text-orange-600 dark:text-orange-400"></i>
+        </div>
+        <div>
+          <h1 class="mb-1 text-2xl font-bold">Ajustes de Inventario</h1>
+          <p class="text-surface-600 dark:text-surface-400">Correcciones y ajustes de stock</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-span-12">
+    <div class="card">
+      <p-toolbar styleClass="mb-6 gap-2">
+        <ng-template #start>
+          <p-button label="Nuevo Ajuste" icon="pi pi-plus" severity="primary" (onClick)="openNew()" />
+        </ng-template>
+        <ng-template #end>
+          <p-button label="Exportar" icon="pi pi-upload" severity="secondary" [outlined]="true" (onClick)="exportCSV()" />
+        </ng-template>
+      </p-toolbar>
+
+      <p-table #dt [value]="adjustments()" [rows]="10" [paginator]="true" [globalFilterFields]="['productName', 'warehouseName', 'reason']" [tableStyle]="{ 'min-width': '75rem' }" [rowHover]="true" dataKey="id" [loading]="loading()">
+        <ng-template #caption>
+          <div class="flex items-center justify-between">
+            <p-iconfield>
+              <p-inputicon><i class="pi pi-search"></i></p-inputicon>
+              <input pInputText type="text" (input)="onGlobalFilter(dt, $event)" placeholder="Buscar..." class="w-full" />
+            </p-iconfield>
+            <p-button icon="pi pi-refresh" [rounded]="true" [outlined]="true" severity="secondary" size="small" (onClick)="loadAdjustments()" />
+          </div>
+        </ng-template>
+
+        <ng-template #header>
+          <tr>
+            <th pSortableColumn="productName">Producto <p-sortIcon field="productName" /></th>
+            <th pSortableColumn="warehouseName">Almacén <p-sortIcon field="warehouseName" /></th>
+            <th pSortableColumn="type">Tipo <p-sortIcon field="type" /></th>
+            <th pSortableColumn="quantity">Cantidad <p-sortIcon field="quantity" /></th>
+            <th>Razón</th>
+            <th pSortableColumn="createdAt">Fecha <p-sortIcon field="createdAt" /></th>
+            <th>Acciones</th>
+          </tr>
+        </ng-template>
+
+        <ng-template #body let-adjustment>
+          <tr>
+            <td><span class="font-semibold">{{adjustment.productName}}</span></td>
+            <td>{{adjustment.warehouseName}}</td>
+            <td><p-tag [value]="getTypeLabel(adjustment.type)" [severity]="getTypeSeverity(adjustment.type)" /></td>
+            <td><span class="font-mono">{{adjustment.quantity}}</span></td>
+            <td>{{adjustment.reason}}</td>
+            <td>{{adjustment.createdAt | date:'short'}}</td>
+            <td>
+              <p-button icon="pi pi-trash" [rounded]="true" [outlined]="true" severity="danger" size="small" (onClick)="delete(adjustment)" />
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template #emptymessage>
+          <tr><td colspan="7" class="text-center">No se encontraron ajustes</td></tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+</div>
+
+<p-dialog [(visible)]="adjustmentDialog" [style]="{ width: '90vw', 'max-width': '700px' }" header="Nuevo Ajuste de Inventario" [modal]="true" styleClass="p-fluid">
+  <ng-template #content>
+    <div class="grid grid-cols-12 gap-4">
+      <div class="col-span-12 md:col-span-6">
+        <label for="type" class="mb-2 block text-sm font-medium">Tipo *</label>
+        <p-select id="type" [(ngModel)]="currentAdjustment().type" [options]="typeOptions" optionLabel="label" optionValue="value" placeholder="Selecciona un tipo" [style]="{ width: '100%' }" appendTo="body" />
+        @if (submitted() && !currentAdjustment().type) {
+          <small class="text-red-500">El tipo es requerido</small>
+        }
+      </div>
+
+      <div class="col-span-12 md:col-span-6">
+        <label for="quantity" class="mb-2 block text-sm font-medium">Cantidad *</label>
+        <p-inputNumber id="quantity" [(ngModel)]="currentAdjustment().quantity" [min]="0" [fluid]="true" />
+        @if (submitted() && !currentAdjustment().quantity) {
+          <small class="text-red-500">La cantidad es requerida</small>
+        }
+      </div>
+
+      <div class="col-span-12">
+        <label for="reason" class="mb-2 block text-sm font-medium">Razón *</label>
+        <textarea pInputTextarea id="reason" [(ngModel)]="currentAdjustment().reason" rows="3" [fluid]="true" placeholder="Describe la razón del ajuste"></textarea>
+        @if (submitted() && !currentAdjustment().reason) {
+          <small class="text-red-500">La razón es requerida</small>
+        }
+      </div>
+
+      <div class="col-span-12">
+        <label for="notes" class="mb-2 block text-sm font-medium">Notas (Opcional)</label>
+        <textarea pInputTextarea id="notes" [(ngModel)]="currentAdjustment().notes" rows="2" [fluid]="true"></textarea>
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template #footer>
+    <div class="flex gap-3 justify-end">
+      <p-button label="Cancelar" icon="pi pi-times" [outlined]="true" severity="secondary" (onClick)="hideDialog()" />
+      <p-button label="Guardar" icon="pi pi-check" (onClick)="save()" />
+    </div>
+  </ng-template>
+</p-dialog>
+
+<p-confirmdialog [style]="{ width: '450px' }" />
